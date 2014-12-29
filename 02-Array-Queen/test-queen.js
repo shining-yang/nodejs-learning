@@ -3,11 +3,15 @@
  * Shining Yang <y.s.n@live.com>, 2014-12-27
  */
 
-if (process.argv.length < 3) {
-	console.log('You must specify the number of queens first.');
-} else {
+var n = 8; // the default is 8
+if (process.argv.length > 2) {
+	n = parseInt(process.argv[2]);
+}
+
 var Queen = require('./queen');
-var n = parseInt(process.argv[2]);
 var q = new Queen(n);
 q.Place();
-}
+
+console.log('Press ENTER key to exit...');
+process.stdin.read();
+
