@@ -12,7 +12,7 @@ var con = mysql.createConnection({
 
 con.connect(function(err, res) {
 	if (err) {
-		console.log('Failed to connect database: ' + err);
+		console.log('Failed to connect database: ' + err.stack);
 		return;
 	} else {
 		console.log('Database connected: ' + util.inspect(res));
