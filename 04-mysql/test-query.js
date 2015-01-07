@@ -7,8 +7,7 @@ var table = 'log';
 var conn = mysql.createConnection({host: 'localhost', user: 'root', password: '111111'});
 
 conn.query('use mysql_test');
-conn.query('drop table if exists ' + table);
-conn.query('create table ' + table + ' (id int, name varchar(32))');
+conn.query('create table if not exists ' + table + ' (id int, name varchar(32))');
 
 var sql = conn.query('SELECT COUNT(*) from ??', table, function(err, row) {
 	if (err) {
