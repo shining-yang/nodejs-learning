@@ -6,6 +6,8 @@
 var util = require('util');
 var express = require('express');
 var router = express.Router();
+var bodyParser = require('body-parser');
+var jsonParser = bodyParser.json();
 
 router.post('/', function(req, res) {
 	var result = {
@@ -16,8 +18,20 @@ router.post('/', function(req, res) {
 		}
 	};
 
-	console.log(util.inspect(req));
+	console.log(req.body);
 	res.status(200).send(JSON.stringify(result, null, 3));
+});
+
+router.delete('/:org', jsonParser, function(req, res) {
+	var result = {
+		errors: {
+			code: '409-02',
+			message: 'Not acceptable'
+		}
+	};
+
+	console.log(req.params);
+	res.status(400).end(JSON.stringify(result, null, 3));
 });
 
 module.exports = router;
