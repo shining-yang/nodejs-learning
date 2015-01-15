@@ -32,6 +32,8 @@ router.delete('/:org', jsonParser, function(req, res) {
 
 	console.log(req.params);
 	console.log('The input org is: ', req.params.org);
+	console.log(util.inspect(jsonParser));
+	console.log(util.inspect(JSON));
 	res.status(400).end(JSON.stringify(result, null, 3));
 });
 
