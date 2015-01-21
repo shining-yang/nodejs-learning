@@ -18,6 +18,7 @@ function apiDepositLicense(req, res) {
       password: '111111'
     };
 
+    console.log('Create mysql connection');
     var connection = mysql.createConnection(options, function(err, res) {
       if (err) {
         console.log('Fail to create mysql connection.');
@@ -26,6 +27,7 @@ function apiDepositLicense(req, res) {
       }
     });
 
+    console.log('Begin transaction');
     connection.beginTransaction(function(err) {
       if (err) {
         throw err;
