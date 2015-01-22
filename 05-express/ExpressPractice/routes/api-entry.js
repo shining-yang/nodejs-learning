@@ -1,5 +1,7 @@
 var express = require('express');
 var router = express.Router();
+var bodyParser = require('body-parser');
+var jsonParser = bodyParser.json();
 
 var apiDepositLicense = require('./api-deposit-license');
 var apiServerStatus = require('./api-server-status');
