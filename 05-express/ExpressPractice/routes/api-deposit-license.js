@@ -36,7 +36,7 @@ function getDuplicateLicenseIds(requests) {
   var idDuplicate = [];
   for (var i = 0; i < requests.length; i++) {
     if (!arrayContains(idUnique, requests[i].license_id)) {
-      idUnique.push(requests[i].license_id));
+      idUnique.push(requests[i].license_id);
     } else {
       if (!arrayContains(idDuplicate, requests[i].license_id)) {
         idDuplicate.push(requests[i].license_id);
@@ -67,7 +67,10 @@ function apiDepositLicense(req, res) {
   
   var dupLicenseIds = getDuplicateLicenseIds(req.body.requests);
   if (dupLicenseIds.length > 0) {
-    var resJson = {};
+    var resJson = {
+	  errors: [],
+	  message: ''
+	};
     for (var i = 0; i < dupLicenseIds.length; i++) {
       resJson.errors.push({
         license_id: dupLicenseIds[i],
