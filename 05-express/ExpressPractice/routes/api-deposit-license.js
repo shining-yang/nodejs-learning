@@ -21,7 +21,7 @@ function checkReqFormat(requests) {
 }
 
 function countLicenseId(ids, licenseId) {
-  for (int i = 0; i < ids.length; i++) {
+  for (var i = 0; i < ids.length; i++) {
     if (ids[i].id == licenseId) {
       ids[i].count++;
       return ids;
