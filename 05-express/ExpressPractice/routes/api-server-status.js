@@ -15,7 +15,7 @@ function apiServerStatus(req, res) {
     database: 'license'
   });
     
-  console.log('Checking mysql status ...');
+  console.log('Connecting mysql ...');
 
   sqlConn.connect(function(err) {
     if (err) {

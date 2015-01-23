@@ -1,11 +1,10 @@
 //
 // Get license server status
 //
-var util = require('util');
 var mysql = require('mysql');
 
 // check whether the format of posted data is valid
-function checkReqFormat(requests) {
+function checkRequestFormat(requests) {
   console.log('Check the format of requested data');
   var n = requests.length;
   for (var i = 0; i < n; i++) {
@@ -21,6 +20,7 @@ function checkReqFormat(requests) {
   return true;
 }
 
+// Determine if an array contains the specified element
 function arrayContains(arr, item) {
   for (var i = 0; i < arr.length; i++) {
     if (arr[i] == item) {
@@ -31,6 +31,7 @@ function arrayContains(arr, item) {
   return false;
 }
 
+// Get duplicated license ids
 function getDuplicateLicenseIds(requests) {
   var idUnique = [];
   var idDuplicate = [];
@@ -47,8 +48,13 @@ function getDuplicateLicenseIds(requests) {
   return idDuplicate;
 }
 
+//
+// API: deposit licenses
+//
 function apiDepositLicense(req, res) {
-  if (!req.body || !Array.isArray(req.body.requests) || !checkReqFormat(req.body.requests)) {
+  // check the API syntax
+  if (!req.body || !Array.isArray(req.body.requests)
+    || !checkRequestFormat(req.body.requests)) {
     var resJson = {
 			errors: {
         code: '400-01',
@@ -61,13 +67,16 @@ function apiDepositLicense(req, res) {
     } else {
       res.status(400).end(JSON.stringify(resJson));
     }
-    
     return;  
   }
   
+  // check if there are some duplicated requests
   var dupLicenseIds = getDuplicateLicenseIds(req.body.requests);
   if (dupLicenseIds.length > 0) {
-    var resJson = {};
+    var resJson = {
+      errors: []
+    };
+    
     for (var i = 0; i < dupLicenseIds.length; i++) {
       resJson.errors.push({
         license_id: dupLicenseIds[i],
@@ -81,10 +90,12 @@ function apiDepositLicense(req, res) {
     } else {
       res.status(409).end(JSON.stringify(resJson));
     }
-    
     return;      
   }
   
+  //
+  // access database
+  //
   var options = {
     host: '192.168.113.132',
     port: 3306,
@@ -93,10 +104,10 @@ function apiDepositLicense(req, res) {
     database: 'license'
   };
 
-  console.log('Creating mysql connection...');
-  
-  var connection = mysql.createConnection(options);
-  connection.connect(function(err) {
+  console.log('Connecting mysql ...');
+
+  var sqlConn = mysql.createConnection(options);
+  sqlConn.connect(function(err) {
     if (err) {
       var resJson = {
         errors: {
@@ -110,12 +121,10 @@ function apiDepositLicense(req, res) {
       } else {
         res.status(420).end(JSON.stringify(resJson));
       }
-      
       return;
     }
     
-    
-    connection.end();
+    sqlConn.end();
   });
         
         /*
