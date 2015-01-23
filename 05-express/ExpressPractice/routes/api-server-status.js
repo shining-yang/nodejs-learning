@@ -8,15 +8,13 @@ function apiServerStatus(req, res) {
   res.set('Content-Type', 'application/json');
 
   var sqlConn = mysql.createConnection({
-    host: '192.168.113.132',
-    port: 3306,
+    //host: '192.168.113.132',
+    //port: 3306,
     user: 'root',
     password: '111111',
     database: 'license'
   });
     
-  console.log('Connecting mysql ...');
-
   sqlConn.connect(function(err) {
     if (err) {
       var resJson = {

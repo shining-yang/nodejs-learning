@@ -7,11 +7,11 @@ var util = require('util');
 // check whether the format of posted data is valid
 function checkRequestFormat(requests) {
   var tmpTest = '';
-  if (!tempTest) {
+  if (!tmpTest) {
     console.log('tempTest is empty string. but considered as true');
   }
   
-  cosole.log(util.inspect(requests[0].license_id));
+  console.log(util.inspect(requests[0].license_id));
   
   for (var i = 0; i < requests.length; i++) {
     if (!requests[i].license_id
@@ -63,7 +63,8 @@ function getDuplicateLicenseIds(requests) {
 //
 function apiDepositLicense(req, res) {
   // check the API syntax
-  if (!req.body || !Array.isArray(req.body.requests)
+  if (!req.body
+    || !Array.isArray(req.body.requests)
     || !checkRequestFormat(req.body.requests)) {
     var resJson = {
 			errors: {
@@ -135,7 +136,7 @@ function apiDepositLicense(req, res) {
     }
     
     var sql = 'SELECT state FROM organization WHERE id=??';
-    sqlConn.query(sql, [orgId], function(err, result) {
+    sqlConn.query(sql, [req.query.orgId], function(err, result) {
       
     });
     
