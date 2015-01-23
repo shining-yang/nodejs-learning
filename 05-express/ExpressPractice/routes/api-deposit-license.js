@@ -2,17 +2,27 @@
 // Get license server status
 //
 var mysql = require('mysql');
+var util = require('util');
 
 // check whether the format of posted data is valid
 function checkRequestFormat(requests) {
-  console.log('Check the format of requested data');
-  var n = requests.length;
-  for (var i = 0; i < n; i++) {
-    if (!requests[i].license_id || requests[i].license_id.length <= 0) {
+  var tmpTest = '';
+  if (!tempTest) {
+    console.log('tempTest is empty string. but considered as true');
+  }
+  
+  cosole.log(util.inspect(requests[0].license_id));
+  
+  for (var i = 0; i < requests.length; i++) {
+    if (!requests[i].license_id
+      || requests[i].constructor != String
+      || requests[i].license_id.length <= 0) {
       return false;
     }
     
-    if (!requests[i].deposited_by || requests[i].deposited_by.length <= 0) {
+    if (!requests[i].deposited_by
+      || requests[i].deposited_by.constructor != String
+      || requests[i].deposited_by.length <= 0) {
       return false;
     }
   }
