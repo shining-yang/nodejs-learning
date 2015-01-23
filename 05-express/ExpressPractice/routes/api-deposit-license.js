@@ -130,7 +130,7 @@ function apiDepositLicense(req, res) {
     }
     
     
-    
+    connection.end();
   });
         
         /*
