@@ -3,6 +3,8 @@
 //
 
 function apiServerVersion(req, res) {
+  res.set('Content-Type', 'application/json');
+  
   var resJson = {
     version: '2.x'
   };
