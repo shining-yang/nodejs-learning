@@ -8,11 +8,11 @@ function checkRequestFormat(requests) {
   console.log('Check the format of requested data');
   var n = requests.length;
   for (var i = 0; i < n; i++) {
-    if (!requests[i].license_id || (typeof requests[i].license_id != String) || requests[i].license_id.length <= 0) {
+    if (!requests[i].license_id || requests[i].license_id.length <= 0) {
       return false;
     }
     
-    if (!requests[i].deposited_by || (typeof requests[i].deposited_by != String) || requests[i].deposited_by.length <= 0) {
+    if (!requests[i].deposited_by || requests[i].deposited_by.length <= 0) {
       return false;
     }
   }
@@ -97,8 +97,8 @@ function apiDepositLicense(req, res) {
   // access database
   //
   var options = {
-    host: '192.168.113.132',
-    port: 3306,
+    //host: '192.168.113.132',
+    //port: 3306,
     user: 'root',
     password: '111111',
     database: 'license'
@@ -123,6 +123,11 @@ function apiDepositLicense(req, res) {
       }
       return;
     }
+    
+    var sql = 'SELECT state FROM organization WHERE id=??';
+    sqlConn.query(sql, [orgId], function(err, result) {
+      
+    });
     
     console.log('Finish accessing mysql');
     sqlConn.end();
