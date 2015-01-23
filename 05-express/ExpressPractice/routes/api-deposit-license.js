@@ -125,6 +125,15 @@ function apiDepositLicense(req, res) {
     }
     
     sqlConn.end();
+    
+    var resSuccess = {};
+    resSuccess.licenses = req.requests;
+    
+    if (req.query.pretty == 'true') {
+      res.status(200).end(JSON.stringify(resSuccess, null, 3));
+    } else {
+      res.status(200).end(JSON.stringify(resSuccess));
+    }
   });
         
         /*
