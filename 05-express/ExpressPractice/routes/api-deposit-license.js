@@ -6,6 +6,7 @@ var mysql = require('mysql');
 
 // check whether the format of posted data is valid
 function checkReqFormat(requests) {
+  console.log('Check the format of requested data');
   var n = requests.length;
   for (var i = 0; i < n; i++) {
     if (!requests[i].license_id || requests[i].license_id.length <= 0) {
@@ -18,22 +19,6 @@ function checkReqFormat(requests) {
   }
   
   return true;
-}
-
-function countLicenseId(ids, licenseId) {
-  for (var i = 0; i < ids.length; i++) {
-    if (ids[i].id == licenseId) {
-      ids[i].count++;
-      return ids;
-    }
-  }
-  
-  ids.push({
-    id: licenseId,
-    count: 1
-  });
-  
-  return ids;
 }
 
 function arrayContains(arr, item) {
@@ -50,8 +35,8 @@ function getDuplicateLicenseIds(requests) {
   var idUnique = [];
   var idDuplicate = [];
   for (var i = 0; i < requests.length; i++) {
-    if (!arrayContains(idUnique, requests[i])) {
-      idUnique.push(requests[i]);
+    if (!arrayContains(idUnique, requests[i].license_id)) {
+      idUnique.push(requests[i].license_id));
     } else {
       if (!arrayContains(idDuplicate, requests[i].license_id)) {
         idDuplicate.push(requests[i].license_id);
