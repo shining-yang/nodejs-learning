@@ -74,9 +74,8 @@ function apiDepositLicense(req, res) {
   var dupLicenseIds = getDuplicateLicenseIds(req.body.requests);
   if (dupLicenseIds.length > 0) {
     var resJson = {
-	  errors: [],
-	  message: ''
-	};
+      errors: []
+	  };
     
     for (var i = 0; i < dupLicenseIds.length; i++) {
       resJson.errors.push({
