@@ -63,7 +63,8 @@ function getDuplicateLicenseIds(requests) {
 //
 function apiDepositLicense(req, res) {
   // check the API syntax
-  if (!req.body || !Array.isArray(req.body.requests)
+  if (!req.body
+    || !Array.isArray(req.body.requests)
     || !checkRequestFormat(req.body.requests)) {
     var resJson = {
 			errors: {
