@@ -138,7 +138,7 @@ function apiDepositLicense(req, res) {
     }
     
     var sql = 'SELECT state FROM organization WHERE name=?';
-    sqlConn.query(sql, req.query.orgId, function(err, result) {
+    sqlConn.query(sql, [req.query.orgId], function(err, result) {
       if (err) {
         responseWithError(res, req.query.pretty, 420, '420-02');
         sqlConn.end();
