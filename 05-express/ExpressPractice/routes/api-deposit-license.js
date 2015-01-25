@@ -1,10 +1,10 @@
 //
-// Get license server status
+// Deposit licenses
 //
 var mysql = require('mysql');
 var util = require('util');
 
-// handle error messages
+// Handle error messages
 function responseWithError(res, pretty, errStatus, errCode) {
   var resJson = {
     errors: {
