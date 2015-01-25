@@ -7,21 +7,21 @@ var util = require('util');
 // check whether the format of posted data is valid
 function checkRequestFormat(requests) {
   var tmpTest = '';
-  if (!tempTest) {
+  if (!tmpTest) {
     console.log('tempTest is empty string. but considered as true');
   }
   
-  cosole.log(util.inspect(requests[0].license_id));
+  console.log(util.inspect(requests[0].license_id));
   
   for (var i = 0; i < requests.length; i++) {
     if (!requests[i].license_id
-      || requests[i].constructor != String
+    //  || requests[i].constructor != String
       || requests[i].license_id.length <= 0) {
       return false;
     }
     
     if (!requests[i].deposited_by
-      || requests[i].deposited_by.constructor != String
+     // || requests[i].deposited_by.constructor != String
       || requests[i].deposited_by.length <= 0) {
       return false;
     }
@@ -135,7 +135,7 @@ function apiDepositLicense(req, res) {
     }
     
     var sql = 'SELECT state FROM organization WHERE id=??';
-    sqlConn.query(sql, [orgId], function(err, result) {
+    sqlConn.query(sql, [req.query.orgId], function(err, result) {
       
     });
     
