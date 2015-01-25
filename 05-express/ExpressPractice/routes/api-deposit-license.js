@@ -4,7 +4,7 @@
 var mysql = require('mysql');
 var util = require('util');
 
-// 420-02
+// handle error messages
 function responseWithError(res, pretty, errStatus, errCode) {
   var resJson = {
     errors: {
