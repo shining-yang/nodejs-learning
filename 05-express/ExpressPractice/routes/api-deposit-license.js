@@ -8,10 +8,11 @@ var util = require('util');
 function responseWithError(res, pretty, errStatus, errCode) {
   var resJson = {
     errors: {
+      code: errCode,
+      message: ''
     }
   };
   
-  resJson.errors.code = errCode;
   switch (errCode) {
     case '400-01':
       resJson.errors.message = 'Syntax Error. The syntax is not correct or missing some parameters';
@@ -172,43 +173,6 @@ function apiDepositLicense(req, res) {
       }
     });
   });
-        
-        /*
-    console.log('Begin transaction...');
-    
-    connection.beginTransaction(function(err) {
-      if (err) {
-        throw err;
-      }
-      
-      connection.query('INSERT INTO license VALUES ()', function(err, res) {
-        if (err) {
-          connection.rollback(function() {
-            throw err;
-          });
-        }
-        
-        connection.query('INSERT INTO license_log VALUES ()', function(err, res) {
-          if (err) {
-            connection.rollback(function() {
-              throw err;
-            });
-          }
-          
-          connection.commit(function(err) {
-            if (err) {
-              connection.rollback(function() {
-                throw err;
-              });
-            }
-            
-            console.log('Deposit license OK');
-          });
-        });
-      });
-    });
-  });
-    */
 }
 
 module.exports = apiDepositLicense;
