@@ -159,7 +159,7 @@ function apiDepositLicense(req, res) {
       
       console.log(result);
     
-      
+      sqlConn.end();
       console.log('Finish accessing mysql');
     
       var resSuccess = {};
@@ -171,9 +171,6 @@ function apiDepositLicense(req, res) {
         res.status(200).end(JSON.stringify(resSuccess));
       }
     });
-
-    sqlConn.end();
-    res.status(400).end('Error occurred');
   });
         
         /*
