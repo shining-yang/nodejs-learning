@@ -26,8 +26,11 @@ function responseWithError(res, pretty, errStatus, errCode) {
     case '406-02':
       resJson.errors.message = 'Not Acceptable. The organization is not existed';
       break;
+    case '406-13':
+      resJson.errors.message = 'Not Acceptable. The organization is not in normal mode or exhausted mode';
+      break;
     default:
-      resJson.errors.message = 'Unknown error';
+      resJson.errors.message = 'Unknown error code';
       break;
   }
     
@@ -87,6 +90,13 @@ function getDuplicateLicenseIds(requests) {
 
 // API: deposit licenses
 function apiDepositLicense(req, res) {
+
+{
+  console.log(req.query);
+  console.log(req.body);
+  console.log(req.params);
+}
+
   // check the API syntax
   if (!req.body
     || !Array.isArray(req.body.requests)
@@ -115,7 +125,7 @@ function apiDepositLicense(req, res) {
     } else {
       res.status(409).end(JSON.stringify(resJson));
     }
-    return;      
+    return;
   }
   
   //
@@ -152,25 +162,57 @@ function apiDepositLicense(req, res) {
         return;
       }
       
-      if (result[0].state === 'deducting') {
+      var orgState = result[0].state;
+      if (orgState == 'deducting') {
         responseWithError(res, req.query.pretty, 406, '406-01');
+        sqlConn.end();
+        return;
+      } else if (orgState != 'normal' && orgState != 'exhausted') {
+        responseWithError(res, req.query.pretty, 406, '406-13');
         sqlConn.end();
         return;
       }
       
-      console.log(result);
-    
-      sqlConn.end();
-      console.log('Finish accessing mysql');
-    
-      var resSuccess = {};
-      resSuccess.licenses = req.body.requests;
+      // check if licenses already been used
+      verifyLicenseValidity(req.body.requests, function(invalid, errMessage) {
+        if (invalid) {
+          responseWithError();
+          sqlConn.end();
+        } else {
+          verifyLicenseUsability(req.body.requests, function(used, errMessage) {
+            if (used) {
+              responseWithError();
+              sqlConn.end();
+            }
+            
+            
+          });
+        }
+      });
+      
+      var sql = 'SELECT obu, points, pk_number FROM license_generator WHERE license_id=?';
+      
+      // check the licenses
+      for (var i = 0; i < req.body.requests.length; i++) {
+        sqlConn.query(sql, [req.body.requests[i].license_id], function(err, result) {
+          if (err) {
+            responseWithError(res, req.query.pretty, 420, '420-02');
+            sqlConn.end();
+            return;
+        });
+      }
+      
+      var resJson = {};
+      resJson.licenses = req.body.requests;
 
       if (req.query.pretty == 'true') {
-        res.status(200).end(JSON.stringify(resSuccess, null, 3));
+        res.status(200).end(JSON.stringify(resJson, null, 3));
       } else {
-        res.status(200).end(JSON.stringify(resSuccess));
+        res.status(200).end(JSON.stringify(resJson));
       }
+
+      sqlConn.end();
+      console.log('Finish accessing mysql');
     });
   });
 }
