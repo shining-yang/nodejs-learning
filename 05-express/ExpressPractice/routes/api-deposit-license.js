@@ -169,12 +169,21 @@ function apiDepositLicense(req, res) {
             idSet += '\'';
           }
 
-          var sql = 'SELECT * from license_generator where app_id=? and license_id in (?)';
-          var para = [appId, idSet];
+          var sql = 'SELECT * from license_generator where license_id in (?)';
+          var para = [idSet];
           sql = mysql.format(sql, para);
-          sqlConn.query(sql, function(err, rows, fields));
+
+          console.log('SQL: ' + sql);
+          sqlConn.query(sql, function(err, result) {
+            if (err) {
+              res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+              sqlConn.end();
+            } else {
+
+            }
+          }); // query license
         }
-      }); // mysql query()
+      }); // query organization
     }
   }); // mysql connect()
 }
