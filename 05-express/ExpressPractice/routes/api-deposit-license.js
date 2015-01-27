@@ -35,7 +35,7 @@ function buildErrorResponse(err, pretty) {
   if (pretty === 'true') {
     return JSON.stringify(resJson, null, 3);
   } else {
-    return SON.stringify(resJson);
+    return JSON.stringify(resJson);
   }
 }
 
@@ -147,7 +147,7 @@ function apiDepositLicense(req, res) {
       sqlConn.query(sql, [req.query.orgId], function (err, result) {
         if (err) {
           res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-          sqlConn.end();
+          sqlConn.end();/*
         } else if (result.length <= 0) {
           res.status(406).end(buildErrorResponse('406-02', req.query.pretty));
           sqlConn.end();
@@ -156,22 +156,19 @@ function apiDepositLicense(req, res) {
           sqlConn.end();
         } else if (result[0].state != 'normal' && result[0].state != 'exhausted') {
           res.status(406).end(buildErrorResponse('406-13', req.query.pretty));
-          sqlConn.end();
+          sqlConn.end();*/
         } else {
           // check usability
-          var idSet = '';
+          var sql = 'SELECT * from license_generator where license_id in (';
           for (var i = 0; i < req.body.requests.length; i++) {
             if (i > 0) {
-              idSet += ', '; // append comma
+              sql += ', '; // append comma
             }
-            idSet += '\'';
-            idSet += req.body.requests[i].license_id;
-            idSet += '\'';
-          }
-
-          var sql = 'SELECT * from license_generator where license_id in (?)';
-          var para = [idSet];
-          sql = mysql.format(sql, para);
+            sql += '\'';
+            sql += req.body.requests[i].license_id;
+            sql += '\'';
+          }  
+          sql += ')';
 
           console.log('SQL: ' + sql);
           sqlConn.query(sql, function(err, result) {
@@ -179,7 +176,9 @@ function apiDepositLicense(req, res) {
               res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
               sqlConn.end();
             } else {
-
+              console.log(result);
+              res.status(200).end('{"error":"ok"}');
+              sqlConn.end();
             }
           }); // query license
         }
