@@ -179,9 +179,9 @@ function apiDepositLicense(req, res) {
   }
 
   // check if there are some duplicated requests
-  var duplicateIds = getDuplicateLicenseIds(req.body.requests);
-  if (duplicateIds.length > 0) {
-    res.status(409).end(buildErrorResponseOnLicense('409-04', req.query.pretty, duplicateIds));
+  var dupIds = getDuplicateLicenseIds(req.body.requests);
+  if (dupIds.length > 0) {
+    res.status(409).end(buildErrorResponseOnLicense('409-04', req.query.pretty, dupIds));
     return;
   }
 
@@ -203,6 +203,7 @@ function apiDepositLicense(req, res) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
     } else {
       var sql = getSqlCheckOrganization(req.query.orgId);
+      console.log('SQL: ' + sql);
       sqlConn.query(sql, function (err, rows) {
         if (err) {
           res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
@@ -231,14 +232,15 @@ function apiDepositLicense(req, res) {
           sql += ')';
 */
           var sql = getSqlCheckLicenseExist(req.body.requests);
-          //console.log('SQL: ' + sql);
+          console.log('SQL: ' + sql);
           sqlConn.query(sql, function(err, rows) {
             if (err) {
               res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
               sqlConn.end();
             } else if (rows.length !== req.body.requests.length) { // there are some licenses which cannot be selected out
-              var invalidLicenses = filterInvalidLicenses(req.body.requests, rows);
-              res.status(406).end(buildErrorResponseOnLicense('406-05', req.query.pretty, invalidLicenses));
+              var ids = filterInvalidLicenses(req.body.requests, rows);
+              res.status(406).end(buildErrorResponseOnLicense('406-05', req.query.pretty, ids));
+              sqlConn.end();
               console.log('Dump all invalid license id: ');
               console.log(invalidLicenses);
             } else {
