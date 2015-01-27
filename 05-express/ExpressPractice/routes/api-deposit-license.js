@@ -4,15 +4,24 @@
 var mysql = require('mysql');
 var util = require('util');
 var DIAG = console.log;
+var mysqlOptions = {
+  //host: '192.168.113.132',
+  //port: 3306,
+  user: 'root',
+  password: '111111',
+  database: 'license'
+};
 
-// build sql statement
+
+// get state of organization
 function getSqlCheckOrganization(organizationId) {
   var sql = 'SELECT state FROM organization WHERE name=?';
   var escapes = [organizationId];
   return mysql.format(sql, escapes)
 }
 
-function getSqlCheckLicenseExist(requests, appId) {
+// check whether licenses exist or not
+function getSqlCheckLicenseExistence(requests, appId) {
   var sql = 'SELECT * FROM license_generator WHERE license_id IN (';
   for (var i = 0; i < requests.length; i++) {
     if (i > 0) {
@@ -27,6 +36,24 @@ function getSqlCheckLicenseExist(requests, appId) {
 //  sql += ' AND app_id=\'';
 //  sql += appId;
 //  sql += '\'';
+
+  return sql;
+}
+
+// check whether licenses already been used by someone else
+function getSqlCheckLicenseUsablity(requests) {
+  var sql = '(';
+  for (var i = 0; i < requests.length; i++) {
+    if (i > 0) {
+      sql += ' UNION ';
+    }
+    sql += 'SELECT \'';
+    sql += requests[i].license_id;
+    sql += '\'';
+  }
+  sql += ')';
+  sql += ' INTERSECT ';
+  sql += '((SELECT id FROM license) UNION (SELECT id FROM license_history))';
 
   return sql;
 }
@@ -188,16 +215,8 @@ function apiDepositLicense(req, res) {
 
   // access database
   //
-  var options = {
-    //host: '192.168.113.132',
-    //port: 3306,
-    user: 'root',
-    password: '111111',
-    database: 'license'
-  };
-
   DIAG('Connecting mysql ...');
-  var sqlConn = mysql.createConnection(options);
+  var sqlConn = mysql.createConnection(mysqlOptions);
   sqlConn.connect(function (err) {
     if (err) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
@@ -231,23 +250,35 @@ function apiDepositLicense(req, res) {
           }
           sql += ')';
 */
-          var sql = getSqlCheckLicenseExist(req.body.requests);
+          var sql = getSqlCheckLicenseExistence(req.body.requests);
           DIAG('SQL: ' + sql);
           sqlConn.query(sql, function(err, rows) {
             if (err) {
               res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
               sqlConn.end();
-            } else if (rows.length !== req.body.requests.length) { // there are some licenses which cannot be selected out
+            } else if (rows.length !== req.body.requests.length) { // specified app_id:licenses does not exist
               var ids = filterInvalidLicenses(req.body.requests, rows);
               DIAG('Dump all invalid license id: ' + ids);
               res.status(406).end(buildErrorResponseOnLicense('406-05', req.query.pretty, ids));
               sqlConn.end();
             } else {
-              DIAG(rows);
-              res.status(200).end('{"error":"ok"}' + '\n');
-              sqlConn.end();
+              var sql = getSqlCheckLicenseUsablity(req.body.requests);
+              DIAG('SQL: ' + sql);
+              sqlConn.query(sql, function(err, rows){
+                if (err) {
+                  res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+                  sqlConn.end();
+                } else if (rows.length > 0) { // specified licenses already been used
+                  res.status(409).end(buildErrorResponseOnLicense('409-03', req.query.pretty), rows);
+                  sqlConn.end();
+                } else {
+                  DIAG(rows);
+                  res.status(200).end('{"error":"ok"}' + '\n');
+                  sqlConn.end();
+                }
+              });
             }
-          }); // query license
+          }); // query license for existence
         }
       }); // query organization
     }
