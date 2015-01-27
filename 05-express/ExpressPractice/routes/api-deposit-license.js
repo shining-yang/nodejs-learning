@@ -4,40 +4,38 @@
 var mysql = require('mysql');
 var util = require('util');
 
-// Handle error messages
-function responseWithError(res, pretty, errStatus, errCode) {
+// build error messages
+function buildErrorResponse(err, pretty) {
+  var message = '';
+  switch (err) {
+    case '400-01':
+      message = 'Syntax Error. The syntax is not correct or missing some parameters';
+      break;
+    case '420-02':
+      message = 'Method Failure. The database is disconnected';
+      break;
+    case '406-01':
+      message = 'Not Acceptable. The organization is not in exhausted mode';
+      break;
+    case '406-02':
+      message = 'Not Acceptable. The organization is not existed';
+      break;
+    case '406-13':
+      message = 'Not Acceptable. The organization is not in normal mode or exhausted mode';
+      break;
+  }
+
   var resJson = {
     errors: {
-      code: errCode,
-      message: ''
+      code: err,
+      message: message
     }
   };
   
-  switch (errCode) {
-    case '400-01':
-      resJson.errors.message = 'Syntax Error. The syntax is not correct or missing some parameters';
-      break;
-    case '420-02':
-      resJson.errors.message = 'Method Failure. The database is disconnected';
-      break;
-    case '406-01':
-      resJson.errors.message = 'Not Acceptable. The organization is not in exhausted mode';
-      break;
-    case '406-02':
-      resJson.errors.message = 'Not Acceptable. The organization is not existed';
-      break;
-    case '406-13':
-      resJson.errors.message = 'Not Acceptable. The organization is not in normal mode or exhausted mode';
-      break;
-    default:
-      resJson.errors.message = 'Unknown error code';
-      break;
-  }
-    
-  if (pretty == 'true') {
-    res.status(errStatus).end(JSON.stringify(resJson, null, 3));
+  if (pretty === 'true') {
+    return JSON.stringify(resJson, null, 3);
   } else {
-    res.status(errStatus).end(JSON.stringify(resJson));
+    return SON.stringify(resJson);
   }
 }
 
@@ -101,7 +99,7 @@ function apiDepositLicense(req, res) {
   if (!req.body
     || !Array.isArray(req.body.requests)
     || !checkRequestFormat(req.body.requests)) {
-    responseWithError(res, req.query.pretty, 400, '400-01');
+    res.status(400).end(buildErrorResponse('400-01', req.query.pretty);
     return;
   }
   
@@ -128,7 +126,6 @@ function apiDepositLicense(req, res) {
     return;
   }
   
-  //
   // access database
   //
   var options = {
@@ -144,31 +141,31 @@ function apiDepositLicense(req, res) {
   var sqlConn = mysql.createConnection(options);
   sqlConn.connect(function(err) {
     if (err) {
-      responseWithError(res, req.query.pretty, 420, '420-02');
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
       return;
     }
     
     var sql = 'SELECT state FROM organization WHERE name=?';
     sqlConn.query(sql, [req.query.orgId], function(err, result) {
       if (err) {
-        responseWithError(res, req.query.pretty, 420, '420-02');
+        res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
         sqlConn.end();
         return;
       }
       
       if (result.length <= 0) { // no records
-        responseWithError(res, req.query.pretty, 406, '406-02');
+        res.status(406).end(buildErrorResponse('406-02', req.query.pretty));
         sqlConn.end();
         return;
       }
       
       var orgState = result[0].state;
       if (orgState == 'deducting') {
-        responseWithError(res, req.query.pretty, 406, '406-01');
+        res.status(406).end(buildErrorResponse('406-01', req.query.pretty));
         sqlConn.end();
         return;
       } else if (orgState != 'normal' && orgState != 'exhausted') {
-        responseWithError(res, req.query.pretty, 406, '406-13');
+        res.status(406).end(buildErrorResponse('406-13', req.query.pretty));
         sqlConn.end();
         return;
       }
@@ -184,8 +181,6 @@ function apiDepositLicense(req, res) {
               responseWithError();
               sqlConn.end();
             }
-            
-            
           });
         }
       });
@@ -196,7 +191,7 @@ function apiDepositLicense(req, res) {
       for (var i = 0; i < req.body.requests.length; i++) {
         sqlConn.query(sql, [req.body.requests[i].license_id], function(err, result) {
           if (err) {
-            responseWithError(res, req.query.pretty, 420, '420-02');
+            res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
             sqlConn.end();
             return;
         });
