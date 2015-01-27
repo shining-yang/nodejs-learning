@@ -202,7 +202,7 @@ function apiDepositLicense(req, res) {
     if (err) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
     } else {
-      var sql = getSqlCheckOrganization(req.query.orgId);
+      var sql = getSqlCheckOrganization(req.params.orgId);
       DIAG('SQL: ' + sql);
       sqlConn.query(sql, function (err, rows) {
         if (err) {
