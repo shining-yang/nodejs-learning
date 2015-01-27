@@ -4,39 +4,99 @@
 var mysql = require('mysql');
 var util = require('util');
 
+// build sql statement
+function getSqlCheckOrganization(organizationId) {
+  var sql = 'SELECT state FROM organization WHERE name=?';
+  var escapes = [organizationId];
+  return mysql.format(sql, escapes)
+}
+
+function getSqlCheckLicenseExist(requests, appId) {
+  var sql = 'SELECT * FROM license_generator WHERE license_id IN (';
+  for (var i = 0; i < requests.length; i++) {
+    if (i > 0) {
+      sql += ', '; // append comma
+    }
+    sql += '\'';
+    sql += requests[i].license_id;
+    sql += '\'';
+  }
+  sql += ')';
+
+//  sql += ' AND app_id=\'';
+//  sql += appId;
+//  sql += '\'';
+
+  return sql;
+}
+
+// stringify json object
+function stringifyJsonResponse(json, pretty) {
+  if (pretty === 'true') {
+    return JSON.stringify(json, null, 3);
+  } else {
+    return JSON.stringify(json);
+  }
+}
+
 // build error messages
 function buildErrorResponse(err, pretty) {
-  var message = '';
+  var msg = '';
   switch (err) {
     case '400-01':
-      message = 'Syntax Error. The syntax is not correct or missing some parameters';
+      msg = 'Syntax Error. The syntax is not correct or missing some parameters';
       break;
     case '420-02':
-      message = 'Method Failure. The database is disconnected';
+      msg = 'Method Failure. The database is disconnected';
       break;
     case '406-01':
-      message = 'Not Acceptable. The organization is not in exhausted mode';
+      msg = 'Not Acceptable. The organization is not in exhausted mode';
       break;
     case '406-02':
-      message = 'Not Acceptable. The organization is not existed';
+      msg = 'Not Acceptable. The organization is not existed';
       break;
     case '406-13':
-      message = 'Not Acceptable. The organization is not in normal mode or exhausted mode';
+      msg = 'Not Acceptable. The organization is not in normal mode or exhausted mode';
+      break;
+  }
+
+  return stringifyJsonResponse({
+    errors: {
+      code: err,
+      message: msg
+    }
+  }, pretty);
+}
+
+// Generate error response with licenses
+function buildErrorResponseOnLicense(err, pretty, ids) {
+  var msg = '';
+  switch (err) {
+    case '406-05':
+      msg = 'Not Acceptable. The license is not existed';
+      break;
+    case '409-03':
+      msg = 'Conflict. Duplicated license'; // already been used
+      break;
+
+    case '409-04':
+      msg = 'Not acceptable. Duplicate request parameters'; // API requests contains duplicate ids
       break;
   }
 
   var resJson = {
-    errors: {
-      code: err,
-      message: message
-    }
+    errors: []
   };
 
-  if (pretty === 'true') {
-    return JSON.stringify(resJson, null, 3);
-  } else {
-    return JSON.stringify(resJson);
+  for (var i = 0; i < ids.length; i++) {
+    resJson.errors.push({
+      license_id: ids[i],
+      code: err,
+      message: msg
+    });
   }
+
+  return stringifyJsonResponse(resJson, pretty);
 }
 
 // check whether the format of posted data is valid
@@ -110,12 +170,6 @@ function getDuplicateLicenseIds(requests) {
 // API: deposit licenses
 function apiDepositLicense(req, res) {
 
-  {
-    console.log(req.query);
-    console.log(req.body);
-    console.log(req.params);
-  }
-
   // check the API syntax
   if (!req.body
     || !Array.isArray(req.body.requests)
@@ -125,25 +179,9 @@ function apiDepositLicense(req, res) {
   }
 
   // check if there are some duplicated requests
-  var dupLicenseIds = getDuplicateLicenseIds(req.body.requests);
-  if (dupLicenseIds.length > 0) {
-    var resJson = {
-      errors: []
-    };
-
-    for (var i = 0; i < dupLicenseIds.length; i++) {
-      resJson.errors.push({
-        license_id: dupLicenseIds[i],
-        code: '409-04',
-        message: 'Not acceptable. Duplicate request parameters'
-      });
-    }
-
-    if (req.query.pretty == 'true') {
-      res.status(409).end(JSON.stringify(resJson, null, 3));
-    } else {
-      res.status(409).end(JSON.stringify(resJson));
-    }
+  var duplicateIds = getDuplicateLicenseIds(req.body.requests);
+  if (duplicateIds.length > 0) {
+    res.status(409).end(buildErrorResponseOnLicense('409-04', req.query.pretty, duplicateIds));
     return;
   }
 
@@ -164,9 +202,8 @@ function apiDepositLicense(req, res) {
     if (err) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
     } else {
-      var sql = 'SELECT state FROM organization WHERE name=?';
-      sqlConn.query(sql, [req.query.orgId], function (err, rows) {
-        console.log('Query statement: ' + sql);
+      var sql = getSqlCheckOrganization(req.query.orgId);
+      sqlConn.query(sql, function (err, rows) {
         if (err) {
           res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
           sqlConn.end();/*
@@ -181,6 +218,7 @@ function apiDepositLicense(req, res) {
            sqlConn.end();*/
         } else {
           // check usability
+          /*
           var sql = 'SELECT * from license_generator where license_id in (';
           for (var i = 0; i < req.body.requests.length; i++) {
             if (i > 0) {
@@ -191,34 +229,18 @@ function apiDepositLicense(req, res) {
             sql += '\'';
           }
           sql += ')';
-
-          console.log('SQL: ' + sql);
+*/
+          var sql = getSqlCheckLicenseExist(req.body.requests);
+          //console.log('SQL: ' + sql);
           sqlConn.query(sql, function(err, rows) {
             if (err) {
               res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
               sqlConn.end();
             } else if (rows.length !== req.body.requests.length) { // there are some licenses which cannot be selected out
               var invalidLicenses = filterInvalidLicenses(req.body.requests, rows);
+              res.status(406).end(buildErrorResponseOnLicense('406-05', req.query.pretty, invalidLicenses));
               console.log('Dump all invalid license id: ');
               console.log(invalidLicenses);
-
-              var resJson = {
-                errors: []
-              };
-
-              for (var i = 0; i < invalidLicenses.length; i++) {
-                resJson.errors.push({
-                  license_id: invalidLicenses[i],
-                  code: '406-05',
-                  message: 'Not Acceptable. The license is not existed'
-                });
-              }
-
-              if (req.query.pretty == 'true') {
-                res.status(406).end(JSON.stringify(resJson, null, 3));
-              } else {
-                res.status(406).end(JSON.stringify(resJson));
-              }
             } else {
               console.log(rows);
               res.status(200).end('{"error":"ok"}');
