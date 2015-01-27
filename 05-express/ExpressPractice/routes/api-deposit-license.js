@@ -3,6 +3,7 @@
 //
 var mysql = require('mysql');
 var util = require('util');
+var DIAG = console.log;
 
 // build sql statement
 function getSqlCheckOrganization(organizationId) {
@@ -33,9 +34,9 @@ function getSqlCheckLicenseExist(requests, appId) {
 // stringify json object
 function stringifyJsonResponse(json, pretty) {
   if (pretty === 'true') {
-    return JSON.stringify(json, null, 3);
+    return JSON.stringify(json, null, 2) + '\n';
   } else {
-    return JSON.stringify(json);
+    return JSON.stringify(json) + '\n';
   }
 }
 
@@ -141,30 +142,30 @@ function licenseContainsId(rows, id) {
 
 // Get invalid licenses
 function filterInvalidLicenses(requests, rows) {
-  var idLicense = [];
+  var ids = [];
   for (var i = 0; i < requests.length; i++) {
     if (!licenseContainsId(rows, requests[i].license_id)) {
-      idLicense.push(requests[i].license_id);
+      ids.push(requests[i].license_id);
     }
   }
-  return idLicense;
+  return ids;
 }
 
 // Get duplicated license ids
 function getDuplicateLicenseIds(requests) {
-  var idUnique = [];
-  var idDuplicate = [];
+  var idsExisted = [];
+  var idsDuplicate = [];
   for (var i = 0; i < requests.length; i++) {
-    if (!arrayContains(idUnique, requests[i].license_id)) {
-      idUnique.push(requests[i].license_id);
+    if (!arrayContains(idsExisted, requests[i].license_id)) {
+      idsExisted.push(requests[i].license_id);
     } else {
-      if (!arrayContains(idDuplicate, requests[i].license_id)) {
-        idDuplicate.push(requests[i].license_id);
+      if (!arrayContains(idsDuplicate, requests[i].license_id)) {
+        idsDuplicate.push(requests[i].license_id);
       }
     }
   }
 
-  return idDuplicate;
+  return idsDuplicate;
 }
 
 // API: deposit licenses
@@ -195,15 +196,14 @@ function apiDepositLicense(req, res) {
     database: 'license'
   };
 
-  console.log('Connecting mysql ...');
-
+  DIAG('Connecting mysql ...');
   var sqlConn = mysql.createConnection(options);
   sqlConn.connect(function (err) {
     if (err) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
     } else {
       var sql = getSqlCheckOrganization(req.query.orgId);
-      console.log('SQL: ' + sql);
+      DIAG('SQL: ' + sql);
       sqlConn.query(sql, function (err, rows) {
         if (err) {
           res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
@@ -232,19 +232,18 @@ function apiDepositLicense(req, res) {
           sql += ')';
 */
           var sql = getSqlCheckLicenseExist(req.body.requests);
-          console.log('SQL: ' + sql);
+          DIAG('SQL: ' + sql);
           sqlConn.query(sql, function(err, rows) {
             if (err) {
               res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
               sqlConn.end();
             } else if (rows.length !== req.body.requests.length) { // there are some licenses which cannot be selected out
               var ids = filterInvalidLicenses(req.body.requests, rows);
+              DIAG('Dump all invalid license id: ' + ids);
               res.status(406).end(buildErrorResponseOnLicense('406-05', req.query.pretty, ids));
               sqlConn.end();
-              console.log('Dump all invalid license id: ');
-              console.log(invalidLicenses);
             } else {
-              console.log(rows);
+              DIAG(rows);
               res.status(200).end('{"error":"ok"}');
               sqlConn.end();
             }
