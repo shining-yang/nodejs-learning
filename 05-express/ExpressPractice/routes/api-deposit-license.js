@@ -244,7 +244,7 @@ function apiDepositLicense(req, res) {
               sqlConn.end();
             } else {
               DIAG(rows);
-              res.status(200).end('{"error":"ok"}');
+              res.status(200).end('{"error":"ok"}' + '\n');
               sqlConn.end();
             }
           }); // query license
