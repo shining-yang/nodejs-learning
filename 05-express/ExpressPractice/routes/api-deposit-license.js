@@ -276,7 +276,7 @@ function apiDepositLicense(req, res) {
                   res.status(200).end('{"error":"ok"}' + '\n');
                   sqlConn.end();
                 }
-              });
+              }); // determine whether license been used
             }
           }); // query license for existence
         }
