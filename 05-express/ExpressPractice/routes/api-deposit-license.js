@@ -31,7 +31,7 @@ function buildErrorResponse(err, pretty) {
       message: message
     }
   };
-  
+
   if (pretty === 'true') {
     return JSON.stringify(resJson, null, 3);
   } else {
@@ -47,14 +47,14 @@ function checkRequestFormat(requests) {
       || requests[i].license_id.length <= 0) {
       return false;
     }
-    
+
     if (!requests[i].deposited_by
       || requests[i].deposited_by.constructor != String
       || requests[i].deposited_by.length <= 0) {
       return false;
     }
   }
-  
+
   return true;
 }
 
@@ -65,7 +65,7 @@ function arrayContains(arr, item) {
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -82,34 +82,34 @@ function getDuplicateLicenseIds(requests) {
       }
     }
   }
-  
+
   return idDuplicate;
 }
 
 // API: deposit licenses
 function apiDepositLicense(req, res) {
 
-{
-  console.log(req.query);
-  console.log(req.body);
-  console.log(req.params);
-}
+  {
+    console.log(req.query);
+    console.log(req.body);
+    console.log(req.params);
+  }
 
   // check the API syntax
   if (!req.body
     || !Array.isArray(req.body.requests)
     || !checkRequestFormat(req.body.requests)) {
-    res.status(400).end(buildErrorResponse('400-01', req.query.pretty);
+    res.status(400).end(buildErrorResponse('400-01', req.query.pretty));
     return;
   }
-  
+
   // check if there are some duplicated requests
   var dupLicenseIds = getDuplicateLicenseIds(req.body.requests);
   if (dupLicenseIds.length > 0) {
     var resJson = {
       errors: []
-	  };
-    
+    };
+
     for (var i = 0; i < dupLicenseIds.length; i++) {
       resJson.errors.push({
         license_id: dupLicenseIds[i],
@@ -117,7 +117,7 @@ function apiDepositLicense(req, res) {
         message: 'Not acceptable. Duplicate request parameters'
       });
     }
-    
+
     if (req.query.pretty == 'true') {
       res.status(409).end(JSON.stringify(resJson, null, 3));
     } else {
@@ -125,7 +125,7 @@ function apiDepositLicense(req, res) {
     }
     return;
   }
-  
+
   // access database
   //
   var options = {
@@ -137,79 +137,46 @@ function apiDepositLicense(req, res) {
   };
 
   console.log('Connecting mysql ...');
-   
+
   var sqlConn = mysql.createConnection(options);
-  sqlConn.connect(function(err) {
+  sqlConn.connect(function (err) {
     if (err) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-      return;
-    }
-    
-    var sql = 'SELECT state FROM organization WHERE name=?';
-    sqlConn.query(sql, [req.query.orgId], function(err, result) {
-      if (err) {
-        res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-        sqlConn.end();
-        return;
-      }
-      
-      if (result.length <= 0) { // no records
-        res.status(406).end(buildErrorResponse('406-02', req.query.pretty));
-        sqlConn.end();
-        return;
-      }
-      
-      var orgState = result[0].state;
-      if (orgState == 'deducting') {
-        res.status(406).end(buildErrorResponse('406-01', req.query.pretty));
-        sqlConn.end();
-        return;
-      } else if (orgState != 'normal' && orgState != 'exhausted') {
-        res.status(406).end(buildErrorResponse('406-13', req.query.pretty));
-        sqlConn.end();
-        return;
-      }
-      
-      // check if licenses already been used
-      verifyLicenseValidity(req.body.requests, function(invalid, errMessage) {
-        if (invalid) {
-          responseWithError();
+    } else {
+      var sql = 'SELECT state FROM organization WHERE name=?';
+      sqlConn.query(sql, [req.query.orgId], function (err, result) {
+        if (err) {
+          res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+          sqlConn.end();
+        } else if (result.length <= 0) {
+          res.status(406).end(buildErrorResponse('406-02', req.query.pretty));
+          sqlConn.end();
+        } else if (result[0].state == 'deducting') {
+          res.status(406).end(buildErrorResponse('406-01', req.query.pretty));
+          sqlConn.end();
+        } else if (result[0].state != 'normal' && result[0].state != 'exhausted') {
+          res.status(406).end(buildErrorResponse('406-13', req.query.pretty));
           sqlConn.end();
         } else {
-          verifyLicenseUsability(req.body.requests, function(used, errMessage) {
-            if (used) {
-              responseWithError();
-              sqlConn.end();
+          // check usability
+          var idSet = '';
+          for (var i = 0; i < req.body.requests.length; i++) {
+            if (i > 0) {
+              idSet += ', '; // append comma
             }
-          });
+            idSet += '\'';
+            idSet += req.body.requests[i].license_id;
+            idSet += '\'';
+          }
+
+          var sql = 'SELECT * from license_generator where app_id=? and license_id in (?)';
+          var para = [appId, idSet];
+          sql = mysql.format(sql, para);
+          sqlConn.query(sql, function(err, rows, fields));
         }
-      });
-      
-      var sql = 'SELECT obu, points, pk_number FROM license_generator WHERE license_id=?';
-      
-      // check the licenses
-      for (var i = 0; i < req.body.requests.length; i++) {
-        sqlConn.query(sql, [req.body.requests[i].license_id], function(err, result) {
-          if (err) {
-            res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-            sqlConn.end();
-            return;
-        });
-      }
-      
-      var resJson = {};
-      resJson.licenses = req.body.requests;
-
-      if (req.query.pretty == 'true') {
-        res.status(200).end(JSON.stringify(resJson, null, 3));
-      } else {
-        res.status(200).end(JSON.stringify(resJson));
-      }
-
-      sqlConn.end();
-      console.log('Finish accessing mysql');
-    });
-  });
+      }); // mysql query()
+    }
+  }); // mysql connect()
 }
 
 module.exports = apiDepositLicense;
