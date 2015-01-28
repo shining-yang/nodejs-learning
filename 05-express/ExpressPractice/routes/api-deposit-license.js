@@ -225,6 +225,7 @@ function apiDepositLicense(req, res) {
       DIAG('SQL: ' + sql);
       sqlConn.query(sql, function (err, rows) {
         if (err) {
+          DIAG(err);
           res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
           sqlConn.end();
           /*
@@ -243,6 +244,7 @@ function apiDepositLicense(req, res) {
           DIAG('SQL: ' + sql);
           sqlConn.query(sql, function (err, rows) {
             if (err) {
+              DIAG(err);
               res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
               sqlConn.end();
             } else if (rows.length > 0) { // some specified licenses already been used
@@ -253,9 +255,8 @@ function apiDepositLicense(req, res) {
               var sql = getSqlCheckLicenseExistence(req.body.requests);
               DIAG('SQL: ' + sql);
               sqlConn.query(sql, function (err, rows) {
-                DIAG('NOW sqlConn is: ');
-                DIAG(sqlConn);
                 if (err) {
+                  DIAG(err);
                   res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
                   sqlConn.end();
                 } else if (rows.length !== req.body.requests.length) { // some specified app_id:licenses does not exist
