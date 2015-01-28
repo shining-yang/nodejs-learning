@@ -217,7 +217,8 @@ function apiDepositLicense(req, res) {
   DIAG('Connecting mysql ...');
   var sqlConn = mysql.createConnection(mysqlOptions);
   sqlConn.connect(function (err) {
-    DIAG('NOW sqlConn is: ' + sqlConn);
+    DIAG('NOW sqlConn is: ');
+    DIAG(sqlConn);
     if (err) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
     } else {
@@ -225,6 +226,8 @@ function apiDepositLicense(req, res) {
       var sql = getSqlCheckOrganization(req.params.orgId);
       DIAG('SQL: ' + sql);
       sqlConn.query(sql, function (err, rows) {
+        DIAG('NOW sqlConn is: ');
+        DIAG(sqlConn);
         if (err) {
           res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
           sqlConn.end();
@@ -243,6 +246,8 @@ function apiDepositLicense(req, res) {
           var sql = getSqlCheckLicenseUsablity(req.body.requests);
           DIAG('SQL: ' + sql);
           sqlConn.query(sql, function (err, rows) {
+            DIAG('NOW sqlConn is: ');
+            DIAG(sqlConn);
             if (err) {
               res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
               sqlConn.end();
@@ -254,6 +259,8 @@ function apiDepositLicense(req, res) {
               var sql = getSqlCheckLicenseExistence(req.body.requests);
               DIAG('SQL: ' + sql);
               sqlConn.query(sql, function (err, rows) {
+                DIAG('NOW sqlConn is: ');
+                DIAG(sqlConn);
                 if (err) {
                   res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
                   sqlConn.end();
@@ -266,12 +273,16 @@ function apiDepositLicense(req, res) {
                   DIAG(rows);
                   DIAG('NOW sqlConn is: ' + sqlConn);
                   sqlConn.beginTransaction(function (err) {
+                    DIAG('NOW sqlConn is: ');
+                    DIAG(sqlConn);
                     if (err) {
                       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
                       sqlConn.end();
                     } else {
                       var sql = 'select count(*) from license_generator'; // insert license
                       sqlConn.query(sql, function(err, results) {
+                        DIAG('NOW sqlConn is: ');
+                        DIAG(sqlConn);
                         if (err) {
                           sqlConn.rollback(function() {
 
@@ -281,6 +292,8 @@ function apiDepositLicense(req, res) {
                         } else {
                           var sql = 'select count(*) from license_generator'; // insert license-log
                           sqlConn.query(sql, function(err, results) {
+                            DIAG('NOW sqlConn is: ');
+                            DIAG(sqlConn);
                             if (err) {
                               sqlConn.rollback(function() {
 
@@ -289,6 +302,8 @@ function apiDepositLicense(req, res) {
                               sqlConn.end();
                             } else {
                               sqlConn.commit(function(err) {
+                                DIAG('NOW sqlConn is: ');
+                                DIAG(sqlConn);
                                 if (err) {
                                   sqlConn.rollback(function() {
 
