@@ -197,7 +197,6 @@ function getDuplicateLicenseIds(requests) {
 
 // API: deposit licenses
 function apiDepositLicense(req, res) {
-
   // check the API syntax
   if (!req.body
     || !Array.isArray(req.body.requests)
@@ -218,15 +217,18 @@ function apiDepositLicense(req, res) {
   DIAG('Connecting mysql ...');
   var sqlConn = mysql.createConnection(mysqlOptions);
   sqlConn.connect(function (err) {
+    DIAG('NOW sqlConn is: ' + sqlConn);
     if (err) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
     } else {
+      // 1. check organization state
       var sql = getSqlCheckOrganization(req.params.orgId);
       DIAG('SQL: ' + sql);
       sqlConn.query(sql, function (err, rows) {
         if (err) {
           res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-          sqlConn.end();/*
+          sqlConn.end();
+          /*
            } else if (rows.length <= 0) {
            res.status(406).end(buildErrorResponse('406-02', req.query.pretty));
            sqlConn.end();
@@ -237,50 +239,80 @@ function apiDepositLicense(req, res) {
            res.status(406).end(buildErrorResponse('406-13', req.query.pretty));
            sqlConn.end();*/
         } else {
-          // check usability
-          /*
-          var sql = 'SELECT * from license_generator where license_id in (';
-          for (var i = 0; i < req.body.requests.length; i++) {
-            if (i > 0) {
-              sql += ', '; // append comma
-            }
-            sql += '\'';
-            sql += req.body.requests[i].license_id;
-            sql += '\'';
-          }
-          sql += ')';
-*/
-          var sql = getSqlCheckLicenseExistence(req.body.requests);
+          // 2. determine whether licenses been used
+          var sql = getSqlCheckLicenseUsablity(req.body.requests);
           DIAG('SQL: ' + sql);
-          sqlConn.query(sql, function(err, rows) {
+          sqlConn.query(sql, function (err, rows) {
             if (err) {
               res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
               sqlConn.end();
-            } else if (rows.length !== req.body.requests.length) { // specified app_id:licenses does not exist
-              var ids = filterInvalidLicenses(req.body.requests, rows);
-              DIAG('Dump all invalid license id: ' + ids);
-              res.status(406).end(buildErrorResponseOnLicense('406-05', req.query.pretty, ids));
+            } else if (rows.length > 0) { // some specified licenses already been used
+              res.status(409).end(buildErrorResponseOnLicense('409-03', req.query.pretty), rows);
               sqlConn.end();
             } else {
-              var sql = getSqlCheckLicenseUsablity(req.body.requests);
+              // 3. check licenses for existence
+              var sql = getSqlCheckLicenseExistence(req.body.requests);
               DIAG('SQL: ' + sql);
-              sqlConn.query(sql, function(err, rows){
+              sqlConn.query(sql, function (err, rows) {
                 if (err) {
                   res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
                   sqlConn.end();
-                } else if (rows.length > 0) { // specified licenses already been used
-                  res.status(409).end(buildErrorResponseOnLicense('409-03', req.query.pretty), rows);
+                } else if (rows.length !== req.body.requests.length) { // some specified app_id:licenses does not exist
+                  var ids = filterInvalidLicenses(req.body.requests, rows);
+                  DIAG('Invalid license id: ' + ids);
+                  res.status(406).end(buildErrorResponseOnLicense('406-05', req.query.pretty, ids));
                   sqlConn.end();
                 } else {
                   DIAG(rows);
-                  res.status(200).end('{"error":"ok"}' + '\n');
-                  sqlConn.end();
+                  DIAG('NOW sqlConn is: ' + sqlConn);
+                  sqlConn.beginTransaction(function (err) {
+                    if (err) {
+                      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+                      sqlConn.end();
+                    } else {
+                      var sql = 'select count(*) from license_generator'; // insert license
+                      sqlConn.query(sql, function(err, results) {
+                        if (err) {
+                          sqlConn.rollback(function() {
+
+                          });
+                          res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+                          sqlConn.end();
+                        } else {
+                          var sql = 'select count(*) from license_generator'; // insert license-log
+                          sqlConn.query(sql, function(err, results) {
+                            if (err) {
+                              sqlConn.rollback(function() {
+
+                              });
+                              res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+                              sqlConn.end();
+                            } else {
+                              sqlConn.commit(function(err) {
+                                if (err) {
+                                  sqlConn.rollback(function() {
+
+                                  });
+                                  res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+                                  sqlConn.end();
+                                } else {
+                                  DIAG('Deposit licenses success.')
+                                  res.status(200).end('{"error":"ok"}' + '\n');
+                                  sqlConn.end();
+                                }
+                              }); // commit transaction
+                            }
+                          }); // insert license-log
+                        }
+                      }); // insert license
+                    }
+                  }); // transaction
                 }
-              }); // determine whether license been used
+              }); // check licenses for existence
             }
-          }); // query license for existence
+          }); // determine whether licenses been used
         }
-      }); // query organization
+      }); // check organization state
     }
   }); // mysql connect()
 }
