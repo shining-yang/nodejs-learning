@@ -47,9 +47,9 @@ function getSqlCheckLicenseUsablity(requests) {
     if (i > 0) {
       sql += ' UNION ';
     }
-    sql += '(SELECT \'';
+    sql += 'SELECT \'';
     sql += requests[i].license_id;
-    sql += '\')';
+    sql += '\' AS id';
   }
   sql += ')';
   sql += ' INTERSECT ';
