@@ -96,6 +96,29 @@ function getSqlDepositLicense(orgId, requests, licenses) {
   return sql;
 }
 
+// generate script for license log (after deposit)
+function getSqlDepositLicenseLog(orgId, licenses) {
+  var sql = 'INSERT INTO license_log';
+  sql += '(license_id, organization_id, billing_id, change_point, action, last_update)';
+  sql += ' VALUES ';
+
+  for (var i = 0; i < licenses.length; i++) {
+    if (i > 0) {
+      sql += ',';
+    }
+
+    var insertSql = '(?, ?, ?, ?, ?, ?)';
+    var insertPara = [
+      licenses[i].license_id, orgId, 0, licenses[i].points, 'deposit',
+      '0000-00-00 00:00:00'
+    ];
+
+    sql += mysql.format(insertSql, insertPara);
+  }
+
+  return sql;
+}
+
 // stringify json object
 function stringifyJsonResponse(json, pretty) {
   if (pretty === 'true') {
@@ -310,21 +333,21 @@ function apiDepositLicense(req, res) {
                       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
                       sqlConn.release();
                     } else {
-                      var sql = getSqlDepositLicense(req.params.orgId, req.body.requests, rows); // insert license
+                      //var sql = getSqlDepositLicense(req.params.orgId, req.body.requests, rows); // insert license
+                      var sql = 'Select 1 + 1';
                       DIAG('SQL: ' + sql);
                       sqlConn.query(sql, function(err, results) {
                         if (err) {
                           sqlConn.rollback(function() {
-
                           });
                           res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
                           sqlConn.release();
                         } else {
-                          var sql = 'select count(*) from license_generator'; // insert license-log
+                          var sql = getSqlDepositLicenseLog(req.params.orgId, rows); // insert license-log
+                          DIAG('SQL: ' + sql);
                           sqlConn.query(sql, function(err, results) {
                             if (err) {
                               sqlConn.rollback(function() {
-
                               });
                               res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
                               sqlConn.release();
@@ -332,7 +355,6 @@ function apiDepositLicense(req, res) {
                               sqlConn.commit(function(err) {
                                 if (err) {
                                   sqlConn.rollback(function() {
-
                                   });
                                   res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
                                   sqlConn.release();
