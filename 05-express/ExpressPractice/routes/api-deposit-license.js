@@ -231,17 +231,17 @@ function apiDepositLicense(req, res) {
         if (err) {
           DIAG(err);
           res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-          sqlConn.end();
+          sqlConn.release();
           /*
            } else if (rows.length <= 0) {
            res.status(406).end(buildErrorResponse('406-02', req.query.pretty));
-           sqlConn.end();
+           sqlConn.release();
            } else if (rows[0].state == 'deducting') {
            res.status(406).end(buildErrorResponse('406-01', req.query.pretty));
-           sqlConn.end();
+           sqlConn.release();
            } else if (rows[0].state != 'normal' && rows[0].state != 'exhausted') {
            res.status(406).end(buildErrorResponse('406-13', req.query.pretty));
-           sqlConn.end();*/
+           sqlConn.release();*/
         } else {
           // 2. determine whether licenses been used
           var sql = getSqlCheckLicenseUsablity(req.body.requests);
@@ -250,10 +250,10 @@ function apiDepositLicense(req, res) {
             if (err) {
               DIAG(err);
               res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-              sqlConn.end();
+              sqlConn.release();
             } else if (rows.length > 0) { // some specified licenses already been used
               res.status(409).end(buildErrorResponseOnLicense('409-03', req.query.pretty), rows);
-              sqlConn.end();
+              sqlConn.release();
             } else {
               // 3. check licenses for existence
               var sql = getSqlCheckLicenseExistence(req.body.requests);
@@ -262,17 +262,17 @@ function apiDepositLicense(req, res) {
                 if (err) {
                   DIAG(err);
                   res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-                  sqlConn.end();
+                  sqlConn.release();
                 } else if (rows.length !== req.body.requests.length) { // some specified app_id:licenses does not exist
                   var ids = filterInvalidLicenses(req.body.requests, rows);
                   DIAG('Invalid license id: ' + ids);
                   res.status(406).end(buildErrorResponseOnLicense('406-05', req.query.pretty, ids));
-                  sqlConn.end();
+                  sqlConn.release();
                 } else {
                   sqlConn.beginTransaction(function (err) {
                     if (err) {
                       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-                      sqlConn.end();
+                      sqlConn.release();
                     } else {
                       var sql = 'select count(*) from license_generator'; // insert license
                       sqlConn.query(sql, function(err, results) {
@@ -281,7 +281,7 @@ function apiDepositLicense(req, res) {
 
                           });
                           res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-                          sqlConn.end();
+                          sqlConn.release();
                         } else {
                           var sql = 'select count(*) from license_generator'; // insert license-log
                           sqlConn.query(sql, function(err, results) {
@@ -290,7 +290,7 @@ function apiDepositLicense(req, res) {
 
                               });
                               res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-                              sqlConn.end();
+                              sqlConn.release();
                             } else {
                               sqlConn.commit(function(err) {
                                 if (err) {
@@ -298,11 +298,11 @@ function apiDepositLicense(req, res) {
 
                                   });
                                   res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-                                  sqlConn.end();
+                                  sqlConn.release();
                                 } else {
                                   DIAG('Deposit licenses success.')
                                   res.status(200).end('{"error":"ok"}' + '\n');
-                                  sqlConn.end();
+                                  sqlConn.release();
                                 }
                               }); // commit transaction
                             }
