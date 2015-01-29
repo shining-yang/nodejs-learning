@@ -75,7 +75,7 @@ function getSqlDepositLicense(orgId, requests, licenses) {
     for (var n = 0; n < licenses.length; n++) {
       if (requests[i].license_id === licenses[n].license_id) {
         idx = n;
-        brek;
+        break;
       }
     }
 
