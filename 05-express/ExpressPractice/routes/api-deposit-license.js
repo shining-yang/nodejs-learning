@@ -40,20 +40,21 @@ function getSqlCheckLicenseExistence(requests, appId) {
   return sql;
 }
 
-// check whether licenses already been used by someone else
+// check whether licenses already been used by someone else （取集合交集）
 function getSqlCheckLicenseUsablity(requests) {
-  var sql = '(';
+  var sql = 'SELECT id FROM (';
   for (var i = 0; i < requests.length; i++) {
     if (i > 0) {
       sql += ' UNION ';
     }
-    sql += 'SELECT \'';
+    sql += '(SELECT \'';
     sql += requests[i].license_id;
-    sql += '\' AS id';
+    sql += '\' AS id)';
   }
-  sql += ')';
-  sql += ' INTERSECT ';
-  sql += '((SELECT id FROM license) UNION (SELECT id FROM license_history))';
+  sql += ') AS yourID';
+  sql += ' INNER JOIN ';
+  sql += '((SELECT id FROM license) UNION (SELECT id FROM license_history)) AS ourID'
+  sql += ' USING (id)';
 
   return sql;
 }
