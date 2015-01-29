@@ -33,9 +33,9 @@ function getSqlCheckLicenseExistence(requests, appId) {
   }
   sql += ')';
 
-//  sql += ' AND app_id=\'';
-//  sql += appId;
-//  sql += '\'';
+  sql += ' AND app_id=\'';
+  sql += appId;
+  sql += '\'';
 
   return sql;
 }
@@ -53,7 +53,7 @@ function getSqlCheckLicenseUsablity(requests) {
   }
   sql += ') AS yourID';
   sql += ' INNER JOIN ';
-  sql += '((SELECT id FROM license) UNION (SELECT id FROM license_history)) AS ourID'
+  sql += '((SELECT id FROM license) UNION (SELECT id FROM license_history)) AS ourID';
   sql += ' USING (id)';
 
   return sql;
@@ -208,7 +208,7 @@ function buildSuccessResponse(orgId, req, lic, cycle, pretty) {
       expiration: 0,
       belongs_to: orgId,
       deposited_by: req[i].deposited_by
-    })
+    });
   }
 
   return stringifyJsonResponse(resJson, pretty);
@@ -303,8 +303,6 @@ function apiDepositLicense(req, res) {
   //
   DIAG('Connecting mysql ...');
 
-//  var sqlConn = mysql.createConnection(mysqlOptions);
-//  sqlConn.connect(function (err) {
   mysqlPool.getConnection(function (err, sqlConn) {
     if (err) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
