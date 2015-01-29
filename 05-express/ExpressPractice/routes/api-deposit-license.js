@@ -60,6 +60,42 @@ function getSqlCheckLicenseUsablity(requests) {
   return sql;
 }
 
+// construct sql script to deposit licenses
+function getSqlDepositLicense(orgId, requests, licenses) {
+  var sql = 'INSERT INTO license';
+//  sql += ' (id, organization_id, user_id, original_point, remaining_point, po_number, bill_to, expiration, last_update)';
+  sql += ' VALUES ';
+
+  for (var i = 0; i < requests.length; i++) {
+    if (i > 0) {
+      sql += ',';
+    }
+
+    var idx = -1;
+    for (var n = 0; n < licenses.length; n++) {
+      if (requests[i].license_id === licenses[n].license_id) {
+        idx = n;
+        brek;
+      }
+    }
+
+    if (idx < 0) {
+      throw new Error({msg: 'Should not happen'});
+    }
+
+    var insertSql = '(?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    var insertPara = [
+      requests[i].license_id, orgId, requests[i].deposited_by,
+      licenses[idx].points, licenses[idx].points, licenses[idx].pk_number,
+      licenses[idx].obu, 6, '0000-00-00 00:00:00'
+    ];
+
+    sql += mysql.format(insertSql, insertPara);
+  }
+
+  return sql;
+}
+
 // stringify json object
 function stringifyJsonResponse(json, pretty) {
   if (pretty === 'true') {
@@ -274,7 +310,8 @@ function apiDepositLicense(req, res) {
                       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
                       sqlConn.release();
                     } else {
-                      var sql = 'select count(*) from license_generator'; // insert license
+                      var sql = getSqlDepositLicense(req.params.orgId, req.body.requests, rows); // insert license
+                      DIAG('SQL: ' + sql);
                       sqlConn.query(sql, function(err, results) {
                         if (err) {
                           sqlConn.rollback(function() {
