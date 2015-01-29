@@ -12,6 +12,7 @@ var mysqlOptions = {
   database: 'license'
 };
 
+var mysqlPool = mysql.createPool(mysqlOptions);
 
 // get state of organization
 function getSqlCheckOrganization(organizationId) {
@@ -216,8 +217,10 @@ function apiDepositLicense(req, res) {
   // access database
   //
   DIAG('Connecting mysql ...');
-  var sqlConn = mysql.createConnection(mysqlOptions);
-  sqlConn.connect(function (err) {
+
+//  var sqlConn = mysql.createConnection(mysqlOptions);
+//  sqlConn.connect(function (err) {
+  mysqlPool.getConnection(function (err, sqlConn) {
     if (err) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
     } else {
