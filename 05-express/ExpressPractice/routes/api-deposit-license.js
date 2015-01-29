@@ -195,19 +195,19 @@ function buildErrorResponseOnLicense(err, ids, pretty) {
   return stringifyJsonResponse(resJson, pretty);
 }
 
-function buildSuccessResponse(orgId, cycle, requests, licenses, pretty) {
+function buildSuccessResponse(orgId, req, lic, cycle, pretty) {
   var resJson = {
     licenses: []
   };
 
-  for (var i = 0; i < requests.length; i++) {
+  for (var i = 0; i < req.length; i++) {
     resJson.licenses.push({
-      id: requests[i].license_id,
-      points: license[i].points,
+      id: req[i].license_id,
+      points: lic[i].points,
       unit: cycle,
       expiration: 0,
       belongs_to: orgId,
-      deposited_by: requests[i].deposited_by
+      deposited_by: req[i].deposited_by
     })
   }
 
@@ -317,16 +317,15 @@ function apiDepositLicense(req, res) {
           DIAG(err);
           res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
           sqlConn.release();
-          /*
-           } else if (rowsOrg.length <= 0) {
-           res.status(406).end(buildErrorResponse('406-02', req.query.pretty));
-           sqlConn.release();
-           } else if (rowsOrg[0].state == 'deducting') {
-           res.status(406).end(buildErrorResponse('406-01', req.query.pretty));
-           sqlConn.release();
-           } else if (rowsOrg[0].state != 'normal' && rowsOrg[0].state != 'exhausted') {
-           res.status(406).end(buildErrorResponse('406-13', req.query.pretty));
-           sqlConn.release();*/
+        } else if (rowsOrg.length <= 0) {
+          res.status(406).end(buildErrorResponse('406-02', req.query.pretty));
+          sqlConn.release();
+        } else if (rowsOrg[0].state == 'deducting') {
+          res.status(406).end(buildErrorResponse('406-01', req.query.pretty));
+          sqlConn.release();
+        } else if (rowsOrg[0].state != 'normal' && rowsOrg[0].state != 'exhausted') {
+          res.status(406).end(buildErrorResponse('406-13', req.query.pretty));
+          sqlConn.release();
         } else {
           // 2. determine whether licenses been used
           var sql = getSqlCheckLicenseUsablity(req.body.requests);
@@ -364,39 +363,44 @@ function apiDepositLicense(req, res) {
                       // insert into license
                       var sql = getSqlDepositLicense(req.params.orgId, req.body.requests, validLicenses);
                       DIAG('SQL: ' + sql);
-                      sqlConn.query(sql, function(err, results) {
+                      sqlConn.query(sql, function (err, results) {
                         if (err) {
-                          sqlConn.rollback(function() {});
+                          sqlConn.rollback(function () {
+                          });
                           res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
                           sqlConn.release();
                         } else {
                           // insert into license-log
                           var sql = getSqlDepositLicenseLog(req.params.orgId, validLicenses);
                           DIAG('SQL: ' + sql);
-                          sqlConn.query(sql, function(err, results) {
+                          sqlConn.query(sql, function (err, results) {
                             if (err) {
-                              sqlConn.rollback(function() {});
+                              sqlConn.rollback(function () {
+                              });
                               res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
                               sqlConn.release();
                             } else {
                               // get billing cycle (unit)
                               var sql = getSqlBillingCycle(req.params.orgId);
                               DIAG('SQL: ' + sql);
-                              sqlConn.query(sql, function(err, rowsBillingCycle) {
+                              sqlConn.query(sql, function (err, rowsBillingCycle) {
                                 if (err || (rowsBillingCycle.length !== 1)) {
-                                  sqlConn.rollback(function () {});
+                                  sqlConn.rollback(function () {
+                                  });
                                   res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
                                   sqlConn.release();
                                 } else {
-                                  sqlConn.commit(function(err) {
+                                  sqlConn.commit(function (err) {
                                     if (err) {
-                                      sqlConn.rollback(function() {});
+                                      sqlConn.rollback(function () {
+                                      });
                                       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
                                       sqlConn.release();
                                     } else {
                                       DIAG('Deposit licenses success.');
                                       res.status(201).end(buildSuccessResponse(
-                                        req.params.orgId, rowsBillingCycle[0].cycle, req.body.requests, validLicenses, req.query.pretty));
+                                        req.params.orgId, rowsBillingCycle[0].cycle,
+                                        req.body.requests, validLicenses, req.query.pretty));
                                       sqlConn.release();
                                     }
                                   }); // commit transaction
