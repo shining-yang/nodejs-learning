@@ -52,7 +52,7 @@ function buildErrorResponse(err, pretty) {
 }
 
 // Generate error response with licenses
-function buildErrorResponseOnLicenses(err, ids, pretty) {
+function buildErrorResponseOnLicenses(err, licenseIds, pretty) {
   var msg = '';
   switch (err) {
     case '406-05':
@@ -70,9 +70,9 @@ function buildErrorResponseOnLicenses(err, ids, pretty) {
     errors: []
   };
 
-  for (var i = 0; i < ids.length; i++) {
+  for (var i = 0; i < licenseIds.length; i++) {
     resJson.errors.push({
-      license_id: ids[i],
+      license_id: licenseIds[i],
       code: err,
       message: msg
     });

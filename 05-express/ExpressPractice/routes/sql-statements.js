@@ -6,8 +6,8 @@ var mysql = require('mysql');
 // get state of organization
 function getOrganizationState(orgId) {
   var sql = 'SELECT state FROM organization WHERE name=?';
-  var escapes = [orgId];
-  return mysql.format(sql, escapes)
+  var para = [orgId];
+  return mysql.format(sql, para)
 }
 
 // check whether licenses exist or not
@@ -113,7 +113,7 @@ function getBillingCycle(orgId) {
   var sql = '';
   sql += 'SELECT cycle FROM billing_profile WHERE id = (';
   sql += 'SELECT profile_id FROM organization_group WHERE id = (';
-  sql += 'SELECT group_id FROM organization WHERE id = ?))';
+  sql += 'SELECT group_id FROM organization WHERE name = ?))';
   return mysql.format(sql, [orgId]);
 }
 
