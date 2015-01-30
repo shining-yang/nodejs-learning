@@ -16,7 +16,7 @@ var mysqlPool = mysql.createPool(mysqlOptions);
 
 
 // stringify json object
-function stringifyJsonResponse(json, pretty) {
+function stringifyJsonObj(json, pretty) {
   if (pretty === 'true') {
     return JSON.stringify(json, null, 2) + '\n';
   } else {
@@ -24,7 +24,7 @@ function stringifyJsonResponse(json, pretty) {
   }
 }
 
-// build error messages
+// build error response message
 function buildErrorResponse(err, pretty) {
   var msg = '';
   switch (err) {
@@ -45,7 +45,7 @@ function buildErrorResponse(err, pretty) {
       break;
   }
 
-  return stringifyJsonResponse({
+  return stringifyJsonObj({
     errors: {
       code: err,
       message: msg
@@ -80,7 +80,7 @@ function buildErrorResponseOnLicenses(err, ids, pretty) {
     });
   }
 
-  return stringifyJsonResponse(resJson, pretty);
+  return stringifyJsonObj(resJson, pretty);
 }
 
 function buildSuccessResponse(orgId, req, lic, cycle, pretty) {
@@ -99,7 +99,7 @@ function buildSuccessResponse(orgId, req, lic, cycle, pretty) {
     });
   }
 
-  return stringifyJsonResponse(resJson, pretty);
+  return stringifyJsonObj(resJson, pretty);
 }
 
 // check whether the format of posted data is valid

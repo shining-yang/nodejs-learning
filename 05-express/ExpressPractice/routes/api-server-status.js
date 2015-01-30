@@ -5,8 +5,6 @@
 var mysql = require('mysql');
 
 function apiServerStatus(req, res) {
-  res.set('Content-Type', 'application/json');
-
   var sqlConn = mysql.createConnection({
     //host: '192.168.113.132',
     //port: 3306,
@@ -14,7 +12,9 @@ function apiServerStatus(req, res) {
     password: '111111',
     database: 'license'
   });
-    
+
+  res.set('Content-Type', 'application/json');
+
   sqlConn.connect(function(err) {
     if (err) {
       var resJson = {
