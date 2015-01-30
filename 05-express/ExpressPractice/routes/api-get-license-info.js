@@ -173,8 +173,14 @@ function perform(req, res, sql, callback) {
       res.status(406).end(buildErrorResponse('406-13', req.query.pretty));
       sql.release();
     } else {
+      DIAG('-------------------------------------------------');
+      DIAG(typeof rowsOrg[0].id);
+      DIAG(typeof rowsOrg[0].state);
+      DIAG('-------------------------------------------------');
+      req.params.orgIdInt = rowsOrg[0].id; // save organization id <int>
+      DIAG(req.params.orgIdInt);
       // 2. get billing cycle which used as `unit`
-      var script = sqlScript.getBillingCycle(req.params.orgId);
+      var script = sqlScript.getBillingCycle(req.params.orgIdInt);
       DIAG('SQL: ' + script);
       sql.query(script, function (err, rowsBillingCycle) {
         if (err || (rowsBillingCycle.length != 1)) {

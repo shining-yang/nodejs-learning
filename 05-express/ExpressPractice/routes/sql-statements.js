@@ -4,9 +4,9 @@
 var mysql = require('mysql');
 
 // get state of organization
-function getOrganizationState(orgId) {
-  var sql = 'SELECT state FROM organization WHERE name=?';
-  var para = [orgId];
+function getOrganizationState(orgName) {
+  var sql = 'SELECT id, state FROM organization WHERE name = ?';
+  var para = [orgName];
   return mysql.format(sql, para)
 }
 
@@ -23,7 +23,7 @@ function checkLicenseExistence(requests, appId) {
   }
   sql += ')';
 
-  sql += ' AND app_id=\'';
+  sql += ' AND app_id = \'';
   sql += appId;
   sql += '\'';
 
@@ -67,6 +67,10 @@ function insertDepositLicense(orgId, requests, licenses) {
         break;
       }
     }
+
+    {{{
+    console.log('>>>>>> i: %d, idx: %d', i, idx);
+    }}}
 
     if (idx < 0) {
       throw new Error({msg: 'Should not happen'});
@@ -113,7 +117,7 @@ function getBillingCycle(orgId) {
   var sql = '';
   sql += 'SELECT cycle FROM billing_profile WHERE id = (';
   sql += 'SELECT profile_id FROM organization_group WHERE id = (';
-  sql += 'SELECT group_id FROM organization WHERE name = ?))';
+  sql += 'SELECT group_id FROM organization WHERE id = ?))';
   return mysql.format(sql, [orgId]);
 }
 
