@@ -100,7 +100,7 @@ function buildSuccessResponseSingle(cycle, orgName, license, pretty) {
 }
 
 // generate response on multiple licenses
-function buildSuccessResponseMultiple(cycle, licenses, pretty) {
+function buildSuccessResponseMultiple(cycle, orgName, licenses, pretty) {
   var resJson = {
     licenses: []
   };
@@ -112,7 +112,7 @@ function buildSuccessResponseMultiple(cycle, licenses, pretty) {
       remaining_points: licenses[i].remaining_point,
       unit: cycle,
       expiration: licenses[i].expiration,
-      belongs_to: licenses[i].organization_id,
+      belongs_to: orgName,
       deposited_by: licenses[i].user_id,
       activation_time: licenses[i].last_update
     });
@@ -146,7 +146,7 @@ function getLicenseInfoMultiple(req, res, sql, cycle) {
     if (err) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
     } else {
-      res.status(200).end(buildSuccessResponseMultiple(cycle, rows, req.query.pretty));
+      res.status(200).end(buildSuccessResponseMultiple(cycle, req.params.orgId, rows, req.query.pretty));
     }
 
     sql.release();
@@ -173,12 +173,7 @@ function perform(req, res, sql, callback) {
       res.status(406).end(buildErrorResponse('406-13', req.query.pretty));
       sql.release();
     } else {
-      DIAG('-------------------------------------------------');
-      DIAG(typeof rowsOrg[0].id);
-      DIAG(typeof rowsOrg[0].state);
-      DIAG('-------------------------------------------------');
       req.params.orgIdInt = rowsOrg[0].id; // save organization id <int>
-      DIAG(req.params.orgIdInt);
       // 2. get billing cycle which used as `unit`
       var script = sqlScript.getBillingCycle(req.params.orgIdInt);
       DIAG('SQL: ' + script);
