@@ -1,5 +1,5 @@
 //
-// API - Get license info
+// API - Get license log
 //
 var mysql = require('mysql');
 var sqlScript = require('./sql-statements');
@@ -121,7 +121,30 @@ function buildSuccessResponseMultiple(cycle, orgName, licenses, pretty) {
   return stringifyJsonObj(resJson, pretty);
 }
 
-// retrieve specified license info
+
+// generate response on multiple licenses
+function buildSuccessResponseMultiple(cycle, orgName, licenses, pretty) {
+  var resJson = {
+    licenses: []
+  };
+
+  for (var i = 0; i < licenses.length; i++) {
+    resJson.licenses.push({
+      id: licenses[i].id,
+      original_points: licenses[i].original_point,
+      remaining_points: licenses[i].remaining_point,
+      unit: cycle,
+      expiration: licenses[i].expiration,
+      belongs_to: orgName,
+      deposited_by: licenses[i].user_id,
+      activation_time: licenses[i].last_update
+    });
+  }
+
+  return stringifyJsonObj(resJson, pretty);
+}
+
+// retrieve license logs of specified license
 function getLicenseInfoSingle(req, res, sql, cycle) {
   var script = sqlScript.getLicenseInfoWithId(req.params.orgIdInt, req.params.licId);
   DIAG('SQL: ' + script);
@@ -138,7 +161,7 @@ function getLicenseInfoSingle(req, res, sql, cycle) {
   });
 }
 
-// retrieve all license info within the specified organization
+// retrieve all license logs within the specified organization
 function getLicenseInfoMultiple(req, res, sql, cycle) {
   var script = sqlScript.getLicenseInfo(req.params.orgIdInt, req.params.licId);
   DIAG('SQL: ' + script);
@@ -153,10 +176,10 @@ function getLicenseInfoMultiple(req, res, sql, cycle) {
   });
 }
 
-// access database for license info
+// access database to retrieve license logs
 function perform(req, res, sql, callback) {
   // 1. check organization state
-  var script = sqlScript.getOrganizationState(req.params.orgId);
+  var script = sqlScript.getOrganizationStateTimezone(req.params.orgId);
   DIAG('SQL: ' + script);
   sql.query(script, function (err, rowsOrg) {
     if (err) {
@@ -174,8 +197,8 @@ function perform(req, res, sql, callback) {
       sql.release();
     } else {
       req.params.orgIdInt = rowsOrg[0].id; // save organization id <int>
-      // 2. get billing cycle which used as `unit`
-      var script = sqlScript.getBillingCycle(req.params.orgIdInt);
+      // 2. get organization time-zone
+      var script = sqlScript.getOrganizationTimeZone(req.params.orgIdInt);
       DIAG('SQL: ' + script);
       sql.query(script, function (err, rowsBillingCycle) {
         if (err || (rowsBillingCycle.length != 1)) {
@@ -201,15 +224,15 @@ function implement(req, res, callback) {
   });
 }
 
-// API - get single license info
+// API - get single license change log
 function apiGetLicenseInfoSingle(req, res) {
-  implement(req, res, getLicenseInfoSingle);
+  implement(req, res, getLicenseLogSingle);
 }
 
-// API - get all license info within specified organization-id
+// API - get all license logs within specified organization-id
 function apiGetLicenseInfo(req, res) {
-  implement(req, res, getLicenseInfoMultiple);
+  implement(req, res, getLicenseLogMultiple);
 }
 
-module.exports.apiGetLicenseInfoSingle = apiGetLicenseInfoSingle;
-module.exports.apiGetLicenseInfo = apiGetLicenseInfo;
+module.exports.apiGetLicenseLogSingle = apiGetLicenseLogSingle;
+module.exports.apiGetLicenseLog = apiGetLicenseLog;

@@ -1,5 +1,5 @@
 //
-// Deposit licenses
+// API - Deposit licenses
 //
 var mysql = require('mysql');
 var util = require('util');

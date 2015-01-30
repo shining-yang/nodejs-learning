@@ -3,11 +3,25 @@
 //
 var mysql = require('mysql');
 
+// get all info about the specified organization
+function getOrganizationInfoByName(orgName) {
+  var sql = 'SELECT * FROM organization WHERE name = ?';
+  var para = [orgName];
+  return mysql.format(sql, para);
+}
+
 // get state of organization
 function getOrganizationState(orgName) {
   var sql = 'SELECT id, state FROM organization WHERE name = ?';
   var para = [orgName];
-  return mysql.format(sql, para)
+  return mysql.format(sql, para);
+}
+
+// get organization info: state, time-zone
+function getOrganizationStateTimezone(orgName) {
+  var sql = 'SELECT id, state, time_zone FROM organization WHERE name = ?';
+  var para = [orgName];
+  return mysql.format(sql, para);
 }
 
 // check whether licenses exist or not
@@ -153,7 +167,9 @@ function getLicenseInfo(orgId) {
   return mysql.format(sql, [orgId, orgId]);
 }
 
+module.exports.getOrganizationInfoByName = getOrganizationInfoByName;
 module.exports.getOrganizationState = getOrganizationState;
+module.exports.getOrganizationStateTimezone = getOrganizationStateTimezone;
 module.exports.checkLicenseUsablity = checkLicenseUsablity;
 module.exports.checkLicenseExistence = checkLicenseExistence;
 module.exports.insertDepositLicense = insertDepositLicense;
