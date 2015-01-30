@@ -169,7 +169,7 @@ function perform(req, res, sql, callback) {
     } else if (rowsOrg[0].state == 'deducting') {
       res.status(406).end(buildErrorResponse('406-01', req.query.pretty));
       sql.release();
-    } else if (rowsOrg[0].state == 'removed') {
+    } else if (rowsOrg[0].state != 'normal' && rowsOrg[0].state != 'exhausted') {
       res.status(406).end(buildErrorResponse('406-13', req.query.pretty));
       sql.release();
     } else {
