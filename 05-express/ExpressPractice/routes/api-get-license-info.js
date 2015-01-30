@@ -5,10 +5,10 @@ var mysql = require('mysql');
 var sqlScript = require('./sql-statements');
 var DIAG = console.log;
 var mysqlOptions = {
-  //host: '192.168.113.132',
-  //port: 3306,
+  host: '172.18.190.17',
+  port: 3306,
   user: 'root',
-  password: '111111',
+  password: 'mysql',
   database: 'license'
 };
 var mysqlPool = mysql.createPool(mysqlOptions);
@@ -82,7 +82,7 @@ function buildErrorResponseOnLicenses(err, licenseIds, pretty) {
 }
 
 // generate response on single license
-function buildSuccessResponseSingle(cycle, license, pretty) {
+function buildSuccessResponseSingle(cycle, orgName, license, pretty) {
   var resJson = {
     licenses: {
       id: license.id,
@@ -90,7 +90,7 @@ function buildSuccessResponseSingle(cycle, license, pretty) {
       remaining_points: license.remaining_point,
       unit: cycle,
       expiration: license.expiration,
-      belongs_to: license.organization_id,
+      belongs_to: orgName,
       deposited_by: license.user_id,
       activation_time: license.last_update
     }
@@ -123,7 +123,7 @@ function buildSuccessResponseMultiple(cycle, licenses, pretty) {
 
 // retrieve specified license info
 function getLicenseInfoSingle(req, res, sql, cycle) {
-  var script = sqlScript.getLicenseInfoWithId(req.params.orgId, req.params.licId);
+  var script = sqlScript.getLicenseInfoWithId(req.params.orgIdInt, req.params.licId);
   DIAG('SQL: ' + script);
   sql.query(script, function (err, rows) {
     if (err) {
@@ -131,7 +131,7 @@ function getLicenseInfoSingle(req, res, sql, cycle) {
     } else if (rows.length != 1) {
       res.status(406).end(buildErrorResponseOnLicenses('406-05', [req.params.licId], req.query.pretty));
     } else {
-      res.status(200).end(buildSuccessResponseSingle(cycle, rows[0], req.query.pretty));
+      res.status(200).end(buildSuccessResponseSingle(cycle, req.params.orgId, rows[0], req.query.pretty));
     }
 
     sql.release();
@@ -140,7 +140,7 @@ function getLicenseInfoSingle(req, res, sql, cycle) {
 
 // retrieve all license info within the specified organization
 function getLicenseInfoMultiple(req, res, sql, cycle) {
-  var script = sqlScript.getLicenseInfo(req.params.orgId, req.params.licId);
+  var script = sqlScript.getLicenseInfo(req.params.orgIdInt, req.params.licId);
   DIAG('SQL: ' + script);
   sql.query(script, function (err, rows) {
     if (err) {
