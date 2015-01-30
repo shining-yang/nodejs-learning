@@ -3,6 +3,7 @@
 //
 var mysql = require('mysql');
 var util = require('util');
+var sqlScript = require('./sql-statements')
 var DIAG = console.log;
 var mysqlOptions = {
   //host: '192.168.113.132',
@@ -13,119 +14,6 @@ var mysqlOptions = {
 };
 var mysqlPool = mysql.createPool(mysqlOptions);
 
-// get state of organization
-function getSqlCheckOrganization(orgId) {
-  var sql = 'SELECT state FROM organization WHERE name=?';
-  var escapes = [orgId];
-  return mysql.format(sql, escapes)
-}
-
-// check whether licenses exist or not
-function getSqlCheckLicenseExistence(requests, appId) {
-  var sql = 'SELECT * FROM license_generator WHERE license_id IN (';
-  for (var i = 0; i < requests.length; i++) {
-    if (i > 0) {
-      sql += ', '; // append comma
-    }
-    sql += '\'';
-    sql += requests[i].license_id;
-    sql += '\'';
-  }
-  sql += ')';
-
-  sql += ' AND app_id=\'';
-  sql += appId;
-  sql += '\'';
-
-  return sql;
-}
-
-// check whether licenses already been used by someone else （取集合交集）
-function getSqlCheckLicenseUsablity(requests) {
-  var sql = 'SELECT id FROM (';
-  for (var i = 0; i < requests.length; i++) {
-    if (i > 0) {
-      sql += ' UNION ';
-    }
-    sql += '(SELECT \'';
-    sql += requests[i].license_id;
-    sql += '\' AS id)';
-  }
-  sql += ') AS yourID';
-  sql += ' INNER JOIN ';
-  sql += '((SELECT id FROM license) UNION (SELECT id FROM license_history)) AS ourID';
-  sql += ' USING (id)';
-
-  return sql;
-}
-
-// construct sql script to deposit licenses
-function getSqlDepositLicense(orgId, requests, licenses) {
-  var sql = 'INSERT INTO license';
-//  sql += ' (id, organization_id, user_id, original_point, remaining_point, po_number, bill_to, expiration, last_update)';
-  sql += ' VALUES ';
-
-  for (var i = 0; i < requests.length; i++) {
-    if (i > 0) {
-      sql += ',';
-    }
-
-    var idx = -1;
-    for (var n = 0; n < licenses.length; n++) {
-      if (requests[i].license_id === licenses[n].license_id) {
-        idx = n;
-        break;
-      }
-    }
-
-    if (idx < 0) {
-      throw new Error({msg: 'Should not happen'});
-    }
-
-    var insertSql = '(?, ?, ?, ?, ?, ?, ?, ?, ?)';
-    var insertPara = [
-      requests[i].license_id, orgId, requests[i].deposited_by,
-      licenses[idx].points, licenses[idx].points, licenses[idx].pk_number,
-      licenses[idx].obu, 6, '0000-00-00 00:00:00'
-    ];
-
-    sql += mysql.format(insertSql, insertPara);
-  }
-
-  return sql;
-}
-
-// generate script for license log (after deposit)
-function getSqlDepositLicenseLog(orgId, licenses) {
-  var sql = 'INSERT INTO license_log';
-  sql += ' (license_id, organization_id, billing_id, change_point, action, last_update)';
-  sql += ' VALUES ';
-
-  for (var i = 0; i < licenses.length; i++) {
-    if (i > 0) {
-      sql += ',';
-    }
-
-    var insertSql = '(?, ?, ?, ?, ?, ?)';
-    var insertPara = [
-      licenses[i].license_id, orgId, 0, licenses[i].points, 'deposit',
-      '0000-00-00 00:00:00'
-    ];
-
-    sql += mysql.format(insertSql, insertPara);
-  }
-
-  return sql;
-}
-
-// get billing cycle for organization
-function getSqlBillingCycle(orgId) {
-  var sql = '';
-  sql += 'SELECT cycle FROM billing_profile WHERE id = (';
-  sql += 'SELECT profile_id FROM organization_group WHERE id = (';
-  sql += 'SELECT group_id FROM organization WHERE id = ?))';
-  return mysql.format(sql, [orgId]);
-}
 
 // stringify json object
 function stringifyJsonResponse(json, pretty) {
@@ -166,7 +54,7 @@ function buildErrorResponse(err, pretty) {
 }
 
 // Generate error response with licenses
-function buildErrorResponseOnLicense(err, ids, pretty) {
+function buildErrorResponseOnLicenses(err, ids, pretty) {
   var msg = '';
   switch (err) {
     case '406-05':
@@ -295,7 +183,7 @@ function apiDepositLicense(req, res) {
   // check if there are some duplicated requests
   var dupIds = getDuplicateLicenseIds(req.body.requests);
   if (dupIds.length > 0) {
-    res.status(409).end(buildErrorResponseOnLicense('409-04', dupIds, req.query.pretty));
+    res.status(409).end(buildErrorResponseOnLicenses('409-04', dupIds, req.query.pretty));
     return;
   }
 
@@ -308,7 +196,7 @@ function apiDepositLicense(req, res) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
     } else {
       // 1. check organization state
-      var sql = getSqlCheckOrganization(req.params.orgId);
+      var sql = sqlScript.getOrganizationState(req.params.orgId);
       DIAG('SQL: ' + sql);
       sqlConn.query(sql, function (err, rowsOrg) {
         if (err) {
@@ -326,7 +214,7 @@ function apiDepositLicense(req, res) {
           sqlConn.release();
         } else {
           // 2. determine whether licenses been used
-          var sql = getSqlCheckLicenseUsablity(req.body.requests);
+          var sql = sqlScript.checkLicenseUsablity(req.body.requests);
           DIAG('SQL: ' + sql);
           sqlConn.query(sql, function (err, usedIds) {
             if (err) {
@@ -335,11 +223,11 @@ function apiDepositLicense(req, res) {
               sqlConn.release();
             } else if (usedIds.length > 0) {
               // some specified licenses already been used
-              res.status(409).end(buildErrorResponseOnLicense('409-03', usedIds, req.query.pretty));
+              res.status(409).end(buildErrorResponseOnLicenses('409-03', usedIds, req.query.pretty));
               sqlConn.release();
             } else {
               // 3. check licenses for existence
-              var sql = getSqlCheckLicenseExistence(req.body.requests, req.users);
+              var sql = sqlScript.checkLicenseExistence(req.body.requests, req.users);
               DIAG('SQL: ' + sql);
               sqlConn.query(sql, function (err, validLicenses) {
                 if (err) {
@@ -350,7 +238,7 @@ function apiDepositLicense(req, res) {
                   // some specified app_id:licenses does not exist
                   var invalidIds = filterInvalidLicenses(req.body.requests, validLicenses);
                   DIAG('Invalid license id: ' + invalidIds);
-                  res.status(406).end(buildErrorResponseOnLicense('406-05', invalidIds, req.query.pretty));
+                  res.status(406).end(buildErrorResponseOnLicenses('406-05', invalidIds, req.query.pretty));
                   sqlConn.release();
                 } else {
                   sqlConn.beginTransaction(function (err) {
@@ -359,7 +247,7 @@ function apiDepositLicense(req, res) {
                       sqlConn.release();
                     } else {
                       // insert into license
-                      var sql = getSqlDepositLicense(req.params.orgId, req.body.requests, validLicenses);
+                      var sql = sqlScript.insertDepositLicense(req.params.orgId, req.body.requests, validLicenses);
                       DIAG('SQL: ' + sql);
                       sqlConn.query(sql, function (err, results) {
                         if (err) {
@@ -369,7 +257,7 @@ function apiDepositLicense(req, res) {
                           sqlConn.release();
                         } else {
                           // insert into license-log
-                          var sql = getSqlDepositLicenseLog(req.params.orgId, validLicenses);
+                          var sql = sqlScript.insertDepositLicenseLog(req.params.orgId, validLicenses);
                           DIAG('SQL: ' + sql);
                           sqlConn.query(sql, function (err, results) {
                             if (err) {
@@ -379,7 +267,7 @@ function apiDepositLicense(req, res) {
                               sqlConn.release();
                             } else {
                               // get billing cycle (unit)
-                              var sql = getSqlBillingCycle(req.params.orgId);
+                              var sql = sqlScript.getBillingCycle(req.params.orgId);
                               DIAG('SQL: ' + sql);
                               sqlConn.query(sql, function (err, rowsBillingCycle) {
                                 if (err || (rowsBillingCycle.length !== 1)) {

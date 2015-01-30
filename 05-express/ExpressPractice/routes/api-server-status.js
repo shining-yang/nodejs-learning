@@ -30,19 +30,17 @@ function apiServerStatus(req, res) {
       } else {
         res.status(420).end(JSON.stringify(resJson));
       }
-      return;
-    }
-    
-    sqlConn.end();
-    
-    var resJson = {
-      status: 'ok'
-    };
-    
-    if (req.query.pretty == 'true') {
-      res.status(200).end(JSON.stringify(resJson, null, 3));
     } else {
-      res.status(200).end(JSON.stringify(resJson));
+      sqlConn.end();
+      var resJson = {
+        status: 'ok'
+      };
+
+      if (req.query.pretty == 'true') {
+        res.status(200).end(JSON.stringify(resJson, null, 3));
+      } else {
+        res.status(200).end(JSON.stringify(resJson));
+      }
     }
   });
 }
