@@ -132,6 +132,7 @@ function getBillingCycle(orgId) {
   sql += 'SELECT cycle FROM billing_profile WHERE id = (';
   sql += 'SELECT profile_id FROM organization_group WHERE id = (';
   sql += 'SELECT group_id FROM organization WHERE id = ?))';
+
   return mysql.format(sql, [orgId]);
 }
 
@@ -167,6 +168,26 @@ function getLicenseInfo(orgId) {
   return mysql.format(sql, [orgId, orgId]);
 }
 
+// get all license change logs with specified organization-id & license-id
+function getLicenseLogByOrgAndLic(orgId, licId) {
+  var sql = '';
+  sql += 'SELECT change_point, action, last_update FROM license_log ';
+  sql += 'WHERE organization_id = ? AND license_id = ?';
+
+  return mysql.format(sql, [orgId, licId]);
+}
+
+// get all change logs of all licenses within the organization
+function getLicenseLogByOrg(orgId) {
+  var sql = '';
+  sql += 'SELECT change_point, action, last_update FROM license_log ';
+  sql += 'WHERE organization_id = ?';
+
+  return mysql.format(sql, [orgId]);
+}
+
+
+
 module.exports.getOrganizationInfoByName = getOrganizationInfoByName;
 module.exports.getOrganizationState = getOrganizationState;
 module.exports.getOrganizationStateTimezone = getOrganizationStateTimezone;
@@ -177,3 +198,8 @@ module.exports.insertDepositLicenseLog = insertDepositLicenseLog;
 module.exports.getBillingCycle = getBillingCycle;
 module.exports.getLicenseInfoWithId = getLicenseInfoWithId;
 module.exports.getLicenseInfo = getLicenseInfo;
+module.exports.getLicenseLogByOrgAndLic = getLicenseLogByOrgAndLic;
+module.exports.getLicenseLogByOrg = getLicenseLogByOrg;
+
+
+

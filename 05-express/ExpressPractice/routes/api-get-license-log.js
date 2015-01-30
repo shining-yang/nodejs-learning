@@ -144,25 +144,34 @@ function buildSuccessResponseMultiple(cycle, orgName, licenses, pretty) {
   return stringifyJsonObj(resJson, pretty);
 }
 
+//
+function generateLicenseLogSingle(req, res, sql) {
+  var script = sqlScript.getLicenseLogByOrgAndLic(req.params.orgIdInt, req.params.licId);
+  sql.query(script, function (err, rows) {
+    res.status(200).end(buildSuccessResponseSingle(cycle, req.params.orgId, rows[0], req.query.pretty));
+
+  });
+}
+
 // retrieve license logs of specified license
-function getLicenseInfoSingle(req, res, sql, cycle) {
+function getLicenseLogSingle(req, res, sql) {
   var script = sqlScript.getLicenseInfoWithId(req.params.orgIdInt, req.params.licId);
   DIAG('SQL: ' + script);
   sql.query(script, function (err, rows) {
     if (err) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sql.release();
     } else if (rows.length != 1) {
       res.status(406).end(buildErrorResponseOnLicenses('406-05', [req.params.licId], req.query.pretty));
+      sql.release();
     } else {
-      res.status(200).end(buildSuccessResponseSingle(cycle, req.params.orgId, rows[0], req.query.pretty));
+      generateLicenseLogSingle(req, res, sql);
     }
-
-    sql.release();
   });
 }
 
 // retrieve all license logs within the specified organization
-function getLicenseInfoMultiple(req, res, sql, cycle) {
+function getLicenseLogMultiple(req, res, sql) {
   var script = sqlScript.getLicenseInfo(req.params.orgIdInt, req.params.licId);
   DIAG('SQL: ' + script);
   sql.query(script, function (err, rows) {
@@ -197,17 +206,8 @@ function perform(req, res, sql, callback) {
       sql.release();
     } else {
       req.params.orgIdInt = rowsOrg[0].id; // save organization id <int>
-      // 2. get organization time-zone
-      var script = sqlScript.getOrganizationTimeZone(req.params.orgIdInt);
-      DIAG('SQL: ' + script);
-      sql.query(script, function (err, rowsBillingCycle) {
-        if (err || (rowsBillingCycle.length != 1)) {
-          res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-          sql.release();
-        } else {
-          callback(req, res, sql, rowsBillingCycle[0].cycle);
-        }
-      }); // get billing cycle
+      req.params.timeZone = rowsOrg[0].time_zone; // save it for later use
+      callback(req, res, sql);
     }
   }); // check organization state
 }
