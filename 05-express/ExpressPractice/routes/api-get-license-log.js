@@ -5,10 +5,10 @@ var mysql = require('mysql');
 var sqlScript = require('./sql-statements');
 var DIAG = console.log;
 var mysqlOptions = {
-  host: '172.18.190.17',
+  host: '192.168.154.130',
   port: 3306,
   user: 'root',
-  password: 'mysql',
+  password: '111111',
   database: 'license'
 };
 var mysqlPool = mysql.createPool(mysqlOptions);
@@ -82,19 +82,21 @@ function buildErrorResponseOnLicenses(err, licenseIds, pretty) {
 }
 
 // generate response on single license
-function buildSuccessResponseSingle(cycle, orgName, license, pretty) {
+function buildSuccessResponseSingle(timeZone, logs, pretty) {
   var resJson = {
-    licenses: {
-      id: license.id,
-      original_points: license.original_point,
-      remaining_points: license.remaining_point,
-      unit: cycle,
-      expiration: license.expiration,
-      belongs_to: orgName,
-      deposited_by: license.user_id,
-      activation_time: license.last_update
-    }
+    license_id: logs[0].license_id,
+    remaining_points: logs[0].remaining_point,
+    logs: []
   };
+
+  for (var i = 0; i < logs.length; i++) {
+    resJson.logs.push({
+      change_point: logs[i].change_point,
+      action: logs[i].action,
+      time_zone: timeZone,
+      update_time: logs[i].last_update
+    });
+  }
 
   return stringifyJsonObj(resJson, pretty);
 }
@@ -119,54 +121,22 @@ function buildSuccessResponseMultiple(cycle, orgName, licenses, pretty) {
   }
 
   return stringifyJsonObj(resJson, pretty);
-}
-
-
-// generate response on multiple licenses
-function buildSuccessResponseMultiple(cycle, orgName, licenses, pretty) {
-  var resJson = {
-    licenses: []
-  };
-
-  for (var i = 0; i < licenses.length; i++) {
-    resJson.licenses.push({
-      id: licenses[i].id,
-      original_points: licenses[i].original_point,
-      remaining_points: licenses[i].remaining_point,
-      unit: cycle,
-      expiration: licenses[i].expiration,
-      belongs_to: orgName,
-      deposited_by: licenses[i].user_id,
-      activation_time: licenses[i].last_update
-    });
-  }
-
-  return stringifyJsonObj(resJson, pretty);
-}
-
-//
-function generateLicenseLogSingle(req, res, sql) {
-  var script = sqlScript.getLicenseLogByOrgAndLic(req.params.orgIdInt, req.params.licId);
-  sql.query(script, function (err, rows) {
-    res.status(200).end(buildSuccessResponseSingle(cycle, req.params.orgId, rows[0], req.query.pretty));
-
-  });
 }
 
 // retrieve license logs of specified license
 function getLicenseLogSingle(req, res, sql) {
-  var script = sqlScript.getLicenseInfoWithId(req.params.orgIdInt, req.params.licId);
+  var script = sqlScript.getLicenseLogByOrgAndLic(req.params.orgIdInt, req.params.licId);
   DIAG('SQL: ' + script);
   sql.query(script, function (err, rows) {
     if (err) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-      sql.release();
-    } else if (rows.length != 1) {
+    } else if (rows.length <= 0) {
       res.status(406).end(buildErrorResponseOnLicenses('406-05', [req.params.licId], req.query.pretty));
-      sql.release();
     } else {
-      generateLicenseLogSingle(req, res, sql);
+      res.status(200).end(buildSuccessResponseSingle(req.params.timeZone, rows, req.query.pretty));
     }
+
+    sql.release();
   });
 }
 
@@ -190,23 +160,23 @@ function perform(req, res, sql, callback) {
   // 1. check organization state
   var script = sqlScript.getOrganizationStateTimezone(req.params.orgId);
   DIAG('SQL: ' + script);
-  sql.query(script, function (err, rowsOrg) {
+  sql.query(script, function (err, rows) {
     if (err) {
       DIAG(err);
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
       sql.release();
-    } else if (rowsOrg.length <= 0) {
+    } else if (rows.length <= 0) {
       res.status(406).end(buildErrorResponse('406-02', req.query.pretty));
       sql.release();
-    } else if (rowsOrg[0].state == 'deducting') {
+    } else if (rows[0].state == 'deducting') {
       res.status(406).end(buildErrorResponse('406-01', req.query.pretty));
       sql.release();
-    } else if (rowsOrg[0].state != 'normal' && rowsOrg[0].state != 'exhausted') {
+    } else if (rows[0].state != 'normal' && rows[0].state != 'exhausted') {
       res.status(406).end(buildErrorResponse('406-13', req.query.pretty));
       sql.release();
     } else {
-      req.params.orgIdInt = rowsOrg[0].id; // save organization id <int>
-      req.params.timeZone = rowsOrg[0].time_zone; // save it for later use
+      req.params.orgIdInt = rows[0].id; // save organization id <internal int value>
+      req.params.timeZone = rows[0].time_zone; // save it for later use
       callback(req, res, sql);
     }
   }); // check organization state
