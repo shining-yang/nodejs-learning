@@ -51,36 +51,6 @@ function buildErrorResponse(err, pretty) {
   }, pretty);
 }
 
-// Generate error response with licenses
-function buildErrorResponseOnLicenses(err, licenseIds, pretty) {
-  var msg = '';
-  switch (err) {
-    case '406-05':
-      msg = 'Not Acceptable. The license is not existed';
-      break;
-    case '409-03':
-      msg = 'Conflict. The license has been deposited'; // already been used
-      break;
-    case '409-04':
-      msg = 'Conflict. Duplicated data in the requested content';
-      break;
-  }
-
-  var resJson = {
-    errors: []
-  };
-
-  for (var i = 0; i < licenseIds.length; i++) {
-    resJson.errors.push({
-      license_id: licenseIds[i],
-      code: err,
-      message: msg
-    });
-  }
-
-  return stringifyJsonObj(resJson, pretty);
-}
-
 // generate response on single license
 function buildSuccessResponseSingle(timeZone, logs, pretty) {
   var resJson = {
