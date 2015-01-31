@@ -208,12 +208,12 @@ function implement(req, res, callback) {
 }
 
 // API - get single license change log
-function apiGetLicenseInfoSingle(req, res) {
+function apiGetLicenseLogSingle(req, res) {
   implement(req, res, getLicenseLogSingle);
 }
 
 // API - get all license logs within specified organization-id
-function apiGetLicenseInfo(req, res) {
+function apiGetLicenseLog(req, res) {
   implement(req, res, getLicenseLogMultiple);
 }
 

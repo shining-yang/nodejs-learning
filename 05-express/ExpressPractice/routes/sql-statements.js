@@ -82,9 +82,13 @@ function insertDepositLicense(orgId, requests, licenses) {
       }
     }
 
-    {{{
-    console.log('>>>>>> i: %d, idx: %d', i, idx);
-    }}}
+    {
+      {
+        {
+          console.log('>>>>>> i: %d, idx: %d', i, idx);
+        }
+      }
+    }
 
     if (idx < 0) {
       throw new Error({msg: 'Should not happen'});
@@ -210,7 +214,6 @@ function getLicenseLogByOrg(orgId) {
 
   return mysql.format(sql, [orgId, orgId]);
 }
-
 
 
 module.exports.getOrganizationInfoByName = getOrganizationInfoByName;
