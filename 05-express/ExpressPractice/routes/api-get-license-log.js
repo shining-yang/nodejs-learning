@@ -101,36 +101,42 @@ function buildSuccessResponseSingle(timeZone, logs, pretty) {
   return stringifyJsonObj(resJson, pretty);
 }
 
+// append a license-log to JSON for response
+function appendLicenseLogToResponseJson(json, timeZone, log) {
+  var count = json.licenses.length;
+  if ((count == 0) || (json.licenses[count - 1].id != log.license_id)) {
+    var licenseLogJson = {
+      id: log.license_id,
+      remaining_points: log.remaining_point,
+      logs: []
+    };
+    licenseLogJson.logs.push({
+      change_points: log.change_point,
+      action: log.action,
+      time_zone: timeZone,
+      update_time: log.last_update
+    });
+    json.licenses.push(licenseLogJson);
+  } else {
+    json.licenses[count - 1].logs.push({
+      change_points: log.change_point,
+      action: log.action,
+      time_zone: timeZone,
+      update_time: log.last_update
+    });
+  }
+}
+
 // generate response on multiple licenses
 function buildSuccessResponseMultiple(timeZone, logs, pretty) {
   var resJson = {
     licenses: []
   };
 
-  var licenseLogJson = {
-    logs: []
-  };
-
-  var preLicId = logs[0].license_id; // initialized as first one
-
   for (var i = 0; i < logs.length; i++) {
-    if (preLicId != logs[i].license_id) {
-      preLicId = logs[i].license_id;
-      resJson.licenses.push(licenseLogJson); // append it when finish collecting
-      licenseLogJson.logs = []; // clear it before next round collecting
-    }
-
-    licenseLogJson.id = logs[i].license_id; // assigned same thing repeatedly
-    licenseLogJson.remaining_points = logs[i].remaining_point; // assigned same thing repeatedly
-    licenseLogJson.logs.push({
-      change_points: logs[i].change_point,
-      action: logs[i].action,
-      time_zone: timeZone,
-      update_time: logs[i].last_update
-    });
+    appendLicenseLogToResponseJson(resJson, timeZone, logs[i]);
   }
 
-  resJson.licenses.push(licenseLogJson); // don't forget the last license
   return stringifyJsonObj(resJson, pretty);
 }
 

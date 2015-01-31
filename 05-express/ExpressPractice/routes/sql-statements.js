@@ -180,12 +180,12 @@ function getLicenseLogByOrgAndLic(orgId, licId) {
   sql += 'SELECT L.license_id, L.remaining_point, LOG.change_point, LOG.action, LOG.last_update FROM (';
   sql += '(';
   sql += ' SELECT id AS license_id, organization_id, remaining_point';
-  sql += ' FROM license WHERE organization_id = ? AND license_id = ?';
+  sql += ' FROM license WHERE organization_id = ? AND id = ?';
   sql += ')';
   sql += ' UNION ';
   sql += '(';
   sql += ' SELECT id AS license_id, organization_id, remaining_point';
-  sql += ' FROM license_history WHERE organization_id = ? AND license_id = ?';
+  sql += ' FROM license_history WHERE organization_id = ? AND id = ?';
   sql += ')';
   sql += ') AS L, license_log AS LOG';
   sql += ' WHERE L.license_id = LOG.license_id AND L.organization_id = LOG.organization_id';
