@@ -91,7 +91,7 @@ function buildSuccessResponseSingle(timeZone, logs, pretty) {
 
   for (var i = 0; i < logs.length; i++) {
     resJson.logs.push({
-      change_point: logs[i].change_point,
+      change_points: logs[i].change_point,
       action: logs[i].action,
       time_zone: timeZone,
       update_time: logs[i].last_update
@@ -102,24 +102,35 @@ function buildSuccessResponseSingle(timeZone, logs, pretty) {
 }
 
 // generate response on multiple licenses
-function buildSuccessResponseMultiple(cycle, orgName, licenses, pretty) {
+function buildSuccessResponseMultiple(timeZone, logs, pretty) {
   var resJson = {
     licenses: []
   };
 
-  for (var i = 0; i < licenses.length; i++) {
-    resJson.licenses.push({
-      id: licenses[i].id,
-      original_points: licenses[i].original_point,
-      remaining_points: licenses[i].remaining_point,
-      unit: cycle,
-      expiration: licenses[i].expiration,
-      belongs_to: orgName,
-      deposited_by: licenses[i].user_id,
-      activation_time: licenses[i].last_update
+  var licenseLogJson = {
+    logs: []
+  };
+
+  var preLicId = logs[0].license_id; // initialized as first one
+
+  for (var i = 0; i < logs.length; i++) {
+    if (preLicId != logs[i].license_id) {
+      preLicId = logs[i].license_id;
+      resJson.licenses.push(licenseLogJson); // append it when finish collecting
+      licenseLogJson.logs = []; // clear it before next round collecting
+    }
+
+    licenseLogJson.id = logs[i].license_id; // assigned same thing repeatedly
+    licenseLogJson.remaining_points = logs[i].remaining_point; // assigned same thing repeatedly
+    licenseLogJson.logs.push({
+      change_points: logs[i].change_point,
+      action: logs[i].action,
+      time_zone: timeZone,
+      update_time: logs[i].last_update
     });
   }
 
+  resJson.licenses.push(licenseLogJson); // don't forget the last license
   return stringifyJsonObj(resJson, pretty);
 }
 
@@ -142,13 +153,15 @@ function getLicenseLogSingle(req, res, sql) {
 
 // retrieve all license logs within the specified organization
 function getLicenseLogMultiple(req, res, sql) {
-  var script = sqlScript.getLicenseInfo(req.params.orgIdInt, req.params.licId);
+  var script = sqlScript.getLicenseLogByOrg(req.params.orgIdInt);
   DIAG('SQL: ' + script);
   sql.query(script, function (err, rows) {
     if (err) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+    } else if (rows.length <= 0) {
+      res.status(420).end('{ "UNDEF": "THERE ARE NOT ANY LOGS WITHIN THE ORGANIZATION" }'); // TODO: not defined
     } else {
-      res.status(200).end(buildSuccessResponseMultiple(cycle, req.params.orgId, rows, req.query.pretty));
+      res.status(200).end(buildSuccessResponseMultiple(req.params.timeZone, rows, req.query.pretty));
     }
 
     sql.release();
@@ -176,7 +189,7 @@ function perform(req, res, sql, callback) {
       sql.release();
     } else {
       req.params.orgIdInt = rows[0].id; // save organization id <internal int value>
-      req.params.timeZone = rows[0].time_zone; // save it for later use
+      req.params.timeZone = rows[0].time_zone;
       callback(req, res, sql);
     }
   }); // check organization state

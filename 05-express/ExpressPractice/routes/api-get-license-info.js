@@ -5,10 +5,10 @@ var mysql = require('mysql');
 var sqlScript = require('./sql-statements');
 var DIAG = console.log;
 var mysqlOptions = {
-  host: '172.18.190.17',
+  host: '192.168.154.130',
   port: 3306,
   user: 'root',
-  password: 'mysql',
+  password: '111111',
   database: 'license'
 };
 var mysqlPool = mysql.createPool(mysqlOptions);
@@ -140,7 +140,7 @@ function getLicenseInfoSingle(req, res, sql, cycle) {
 
 // retrieve all license info within the specified organization
 function getLicenseInfoMultiple(req, res, sql, cycle) {
-  var script = sqlScript.getLicenseInfo(req.params.orgIdInt, req.params.licId);
+  var script = sqlScript.getLicenseInfo(req.params.orgIdInt);
   DIAG('SQL: ' + script);
   sql.query(script, function (err, rows) {
     if (err) {
