@@ -12,13 +12,13 @@ var apiLicenseLog = require('./api-get-license-log');
 // Deposit license
 router.post('/organization/:orgId/licenses', apiDepositLicense);
 
-// Get license info
-router.get('/organization/:orgId/licenses/:licId', apiLicenseInfo.apiGetLicenseInfoSingle);
-router.get('/organization/:orgId/licenses', apiLicenseInfo.apiGetLicenseInfo);
-
 // Get license change log
 router.get('/organization/:orgId/licenses/:licId/logs', apiLicenseLog.apiGetLicenseLogSingle);
 router.get('/organization/:orgId/licenses/logs', apiLicenseLog.apiGetLicenseLog);
+
+// Get license info
+router.get('/organization/:orgId/licenses/:licId', apiLicenseInfo.apiGetLicenseInfoSingle);
+router.get('/organization/:orgId/licenses', apiLicenseInfo.apiGetLicenseInfo);
 
 // GET server status
 router.get('/server/status', apiServerStatus);
