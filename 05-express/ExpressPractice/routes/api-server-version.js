@@ -13,12 +13,11 @@ function stringifyJsonObj(json, pretty) {
 
 // API: get server version
 function apiServerVersion(req, res) {
-  var resJson = {
-    version: '2.x'
-  };
-
   res.set('Content-Type', 'application/json');
-  res.status(200).end(stringifyJsonObj(resJson, req.query.pretty));
+  res.status(200).end(stringifyJsonObj({
+    software_version: '2.x',
+    api_version: '0.7.0'
+  }, req.query.pretty));
 }
 
 module.exports = apiServerVersion;
