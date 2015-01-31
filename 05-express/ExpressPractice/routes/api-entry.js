@@ -17,8 +17,8 @@ router.get('/organization/:orgId/licenses/:licId', apiLicenseInfo.apiGetLicenseI
 router.get('/organization/:orgId/licenses', apiLicenseInfo.apiGetLicenseInfo);
 
 // Get license change log
-router.get('/organization/:orgId/licenses/:licId', apiLicenseLog.apiGetLicenseLogSingle);
-router.get('/organization/:orgId/licenses', apiLicenseLog.apiGetLicenseLog);
+router.get('/organization/:orgId/licenses/:licId/logs', apiLicenseLog.apiGetLicenseLogSingle);
+router.get('/organization/:orgId/licenses/logs', apiLicenseLog.apiGetLicenseLog);
 
 // GET server status
 router.get('/server/status', apiServerStatus);
