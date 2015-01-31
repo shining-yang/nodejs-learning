@@ -139,7 +139,7 @@ function getBillingCycle(orgId) {
 // get license info with specified organization-id & license-id
 function getLicenseInfoWithId(orgId, licId) {
   var what = '(SELECT id, organization_id, user_id, original_point, remaining_point, expiration, last_update FROM ';
-  var where = ' WHERE id = ? AND organization_id = ?)';
+  var where = ' WHERE organization_id = ? AND id = ?)';
   var sql = '';
   sql += what;
   sql += 'license';
@@ -149,13 +149,14 @@ function getLicenseInfoWithId(orgId, licId) {
   sql += 'license_history';
   sql += where;
 
-  return mysql.format(sql, [licId, orgId, licId, orgId]);
+  return mysql.format(sql, [orgId, licId, orgId, licId]);
 }
 
 // get all licenses within the organization
 function getLicenseInfo(orgId) {
   var what = '(SELECT id, organization_id, user_id, original_point, remaining_point, expiration, last_update FROM ';
   var where = ' WHERE organization_id = ?)';
+
   var sql = '';
   sql += what;
   sql += 'license';
@@ -169,21 +170,45 @@ function getLicenseInfo(orgId) {
 }
 
 // get all license change logs with specified organization-id & license-id
+// ALSO retrieve license-remaining-point
 function getLicenseLogByOrgAndLic(orgId, licId) {
   var sql = '';
-  sql += 'SELECT change_point, action, last_update FROM license_log ';
-  sql += 'WHERE organization_id = ? AND license_id = ?';
+  sql += 'SELECT L.license_id, L.remaining_point, LOG.change_point, LOG.action, LOG.last_update FROM (';
+  sql += '(';
+  sql += ' SELECT id AS license_id, remaining_point';
+  sql += ' FROM license WHERE organization_id = ? AND license_id = ?';
+  sql += ')';
+  sql += ' UNION ';
+  sql += '(';
+  sql += ' SELECT id AS license_id, remaining_point';
+  sql += ' FROM license_history WHERE organization_dd = ? AND license_id = ?';
+  sql += ')';
+  sql += ') AS L, license_log AS LOG';
+  sql += ' WHERE L.license_id = LOG.license_id AND L.organization_id = LOG.organization_id';
+  sql += ' ORDER BY LOG.last_update ASC';
 
-  return mysql.format(sql, [orgId, licId]);
+  return mysql.format(sql, [orgId, licId, orgId, licId]);
 }
 
 // get all change logs of all licenses within the organization
+// ALSO retrieve license-remaining-point
 function getLicenseLogByOrg(orgId) {
   var sql = '';
-  sql += 'SELECT change_point, action, last_update FROM license_log ';
-  sql += 'WHERE organization_id = ?';
+  sql += 'SELECT L.license_id, L.remaining_point, LOG.change_point, LOG.action, LOG.last_update FROM (';
+  sql += '(';
+  sql += ' SELECT id AS license_id, remaining_point';
+  sql += ' FROM license WHERE organization_id = ?';
+  sql += ')';
+  sql += ' UNION ';
+  sql += '(';
+  sql += ' SELECT id AS license_id, remaining_point';
+  sql += ' FROM license_history WHERE organization_dd = ?';
+  sql += ')';
+  sql += ') AS L, license_log AS LOG';
+  sql += ' WHERE L.license_id = LOG.license_id AND L.organization_id = LOG.organization_id';
+  sql += ' ORDER BY LOG.license_id ASC, LOG.last_update ASC';
 
-  return mysql.format(sql, [orgId]);
+  return mysql.format(sql, [orgId, orgId]);
 }
 
 
