@@ -244,6 +244,14 @@ function insertEraseLicenseLog(orgId, licId, changePoints) {
   mysql.format(sql, [licId, orgId, 0, -changePoints, 'erase']);
 }
 
+// verify two organizations are in same group
+function checkOrganizationsForSameGroup(orgIdSrc, orgIdDest) {
+  var sql = '';
+  sql += 'SELECT count(*) FROM organization AS O1';
+  sql += ' WHERE O1.id = ? AND O1.group_id IN';
+  sql += '(SELECT O2.group_id FROM organization AS O2 WHERE O2.id = ?)';
+  mysql.format(sql, [orgIdSrc, orgIdDest]);
+}
 
 module.exports.getOrganizationAllInfo = getOrganizationAllInfo;
 module.exports.getOrganizationState = getOrganizationState;
@@ -261,3 +269,4 @@ module.exports.getLicenseRemainingPoint = getLicenseRemainingPoint;
 module.exports.copyLicenseToHistory = copyLicenseToHistory;
 module.exports.removeLicense = removeLicense;
 module.exports.insertEraseLicenseLog = insertEraseLicenseLog;
+module.exports.checkOrganizationsForSameGroup = checkOrganizationsForSameGroup;
