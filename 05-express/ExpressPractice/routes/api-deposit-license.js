@@ -172,6 +172,131 @@ function getDuplicateLicenseIds(requests) {
   return idsDuplicate;
 }
 
+// deposit licenses
+function performDepositLicenses(req, res, sql, licenses) {
+  sql.beginTransaction(function (err) {
+    if (err) {
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sql.release();
+    } else {
+      // insert into license
+      var script = sqlScript.insertDepositLicense(req.params.orgId, req.body.requests, licenses);
+      DIAG('SQL: ' + script);
+      sql.query(script, function (err, results) {
+        if (err) {
+          sql.rollback(function () {
+          });
+          res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+          sql.release();
+        } else {
+          // insert into license-log
+          var script = sqlScript.insertDepositLicenseLog(req.params.orgId, licenses);
+          DIAG('SQL: ' + script);
+          sql.query(script, function (err, results) {
+            if (err) {
+              sql.rollback(function () {
+              });
+              res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+              sql.release();
+            } else {
+              // get billing cycle (unit)
+              var script = sqlScript.getBillingCycle(req.params.orgId);
+              DIAG('SQL: ' + script);
+              sql.query(script, function (err, rowsBillingCycle) {
+                if (err || (rowsBillingCycle.length !== 1)) {
+                  sql.rollback(function () {
+                  });
+                  res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+                  sql.release();
+                } else {
+                  sql.commit(function (err) {
+                    if (err) {
+                      sql.rollback(function () {
+                      });
+                      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+                      sql.release();
+                    } else {
+                      DIAG('Deposit licenses success.');
+                      res.status(201).end(buildSuccessResponse(
+                        req.params.orgId, rowsBillingCycle[0].cycle,
+                        req.body.requests, licenses, req.query.pretty));
+                      sql.release();
+                    }
+                  }); // commit transaction
+                }
+              }); // get billing cycle
+            }
+          }); // insert license-log
+        }
+      }); // insert license
+    }
+  }); // stat transaction
+}
+
+// check licenses for existence
+function checkLicenseExistence(req, res, sql) {
+  var script = sqlScript.checkLicenseExistence(req.body.requests, req.users);
+  DIAG('SQL: ' + script);
+  sql.query(script, function (err, validLicenses) {
+    if (err) {
+      DIAG(err);
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sql.release();
+    } else if (validLicenses.length != req.body.requests.length) {
+      // some specified app_id:licenses does not exist
+      var invalidIds = filterInvalidLicenses(req.body.requests, validLicenses);
+      DIAG('Invalid license id: ' + invalidIds);
+      res.status(406).end(buildErrorResponseOnLicenses('406-05', invalidIds, req.query.pretty));
+      sql.release();
+    } else {
+      performDepositLicenses(req, res, sql, validLicenses);
+    }
+  });
+}
+
+// check if there are some licenses already been used
+function checkLicenseUsability(req, res, sql) {
+  var script = sqlScript.checkLicenseUsability(req.body.requests);
+  DIAG('SQL: ' + script);
+  sql.query(script, function (err, usedIds) {
+    if (err) {
+      DIAG(err);
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sql.release();
+    } else if (usedIds.length > 0) { // some specified licenses already been used
+      res.status(409).end(buildErrorResponseOnLicenses('409-03', usedIds, req.query.pretty));
+      sql.release();
+    } else {
+      checkLicenseExistence(req, res, sql);
+    }
+  });
+}
+
+// check organization state
+function checkOrganizationState(req, res, sql) {
+  var script = sqlScript.getOrganizationState(req.params.orgId);
+  DIAG('SQL: ' + script);
+  sql.query(script, function (err, rows) {
+    if (err) {
+      DIAG(err);
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sql.release();
+    } else if (rows.length <= 0) {
+      res.status(406).end(buildErrorResponse('406-02', req.query.pretty));
+      sql.release();
+    } else if (rows[0].state == 'deducting') {
+      res.status(406).end(buildErrorResponse('406-01', req.query.pretty));
+      sql.release();
+    } else if (rows[0].state != 'normal' && rows[0].state != 'exhausted') {
+      res.status(406).end(buildErrorResponse('406-13', req.query.pretty));
+      sql.release();
+    } else {
+      req.params.orgIdInt = rows[0].id;
+      checkLicenseUsability(req, res, sql);
+    }
+  });
+}
+
 // API: deposit licenses
 function apiDepositLicense(req, res) {
   res.set('Content-Type', 'application/json');
@@ -191,122 +316,13 @@ function apiDepositLicense(req, res) {
   }
 
   // access database
-  //
-  mysqlPool.getConnection(function (err, sqlConn) {
+  mysqlPool.getConnection(function (err, sql) {
     if (err) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
     } else {
-      // 1. check organization state
-      var sql = sqlScript.getOrganizationState(req.params.orgId);
-      DIAG('SQL: ' + sql);
-      sqlConn.query(sql, function (err, rowsOrg) {
-        if (err) {
-          DIAG(err);
-          res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-          sqlConn.release();
-        } else if (rowsOrg.length <= 0) {
-          res.status(406).end(buildErrorResponse('406-02', req.query.pretty));
-          sqlConn.release();
-        } else if (rowsOrg[0].state == 'deducting') {
-          res.status(406).end(buildErrorResponse('406-01', req.query.pretty));
-          sqlConn.release();
-        } else if (rowsOrg[0].state != 'normal' && rowsOrg[0].state != 'exhausted') {
-          res.status(406).end(buildErrorResponse('406-13', req.query.pretty));
-          sqlConn.release();
-        } else {
-          // 2. determine whether licenses been used
-          var sql = sqlScript.checkLicenseUsability(req.body.requests);
-          DIAG('SQL: ' + sql);
-          sqlConn.query(sql, function (err, usedIds) {
-            if (err) {
-              DIAG(err);
-              res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-              sqlConn.release();
-            } else if (usedIds.length > 0) {
-              // some specified licenses already been used
-              res.status(409).end(buildErrorResponseOnLicenses('409-03', usedIds, req.query.pretty));
-              sqlConn.release();
-            } else {
-              // 3. check licenses for existence
-              var sql = sqlScript.checkLicenseExistence(req.body.requests, req.users);
-              DIAG('SQL: ' + sql);
-              sqlConn.query(sql, function (err, validLicenses) {
-                if (err) {
-                  DIAG(err);
-                  res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-                  sqlConn.release();
-                } else if (validLicenses.length !== req.body.requests.length) {
-                  // some specified app_id:licenses does not exist
-                  var invalidIds = filterInvalidLicenses(req.body.requests, validLicenses);
-                  DIAG('Invalid license id: ' + invalidIds);
-                  res.status(406).end(buildErrorResponseOnLicenses('406-05', invalidIds, req.query.pretty));
-                  sqlConn.release();
-                } else {
-                  sqlConn.beginTransaction(function (err) {
-                    if (err) {
-                      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-                      sqlConn.release();
-                    } else {
-                      // insert into license
-                      var sql = sqlScript.insertDepositLicense(req.params.orgId, req.body.requests, validLicenses);
-                      DIAG('SQL: ' + sql);
-                      sqlConn.query(sql, function (err, results) {
-                        if (err) {
-                          sqlConn.rollback(function () {
-                          });
-                          res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-                          sqlConn.release();
-                        } else {
-                          // insert into license-log
-                          var sql = sqlScript.insertDepositLicenseLog(req.params.orgId, validLicenses);
-                          DIAG('SQL: ' + sql);
-                          sqlConn.query(sql, function (err, results) {
-                            if (err) {
-                              sqlConn.rollback(function () {
-                              });
-                              res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-                              sqlConn.release();
-                            } else {
-                              // get billing cycle (unit)
-                              var sql = sqlScript.getBillingCycle(req.params.orgId);
-                              DIAG('SQL: ' + sql);
-                              sqlConn.query(sql, function (err, rowsBillingCycle) {
-                                if (err || (rowsBillingCycle.length !== 1)) {
-                                  sqlConn.rollback(function () {
-                                  });
-                                  res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-                                  sqlConn.release();
-                                } else {
-                                  sqlConn.commit(function (err) {
-                                    if (err) {
-                                      sqlConn.rollback(function () {
-                                      });
-                                      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-                                      sqlConn.release();
-                                    } else {
-                                      DIAG('Deposit licenses success.');
-                                      res.status(201).end(buildSuccessResponse(
-                                        req.params.orgId, rowsBillingCycle[0].cycle,
-                                        req.body.requests, validLicenses, req.query.pretty));
-                                      sqlConn.release();
-                                    }
-                                  }); // commit transaction
-                                }
-                              }); // get billing cycle
-                            }
-                          }); // insert license-log
-                        }
-                      }); // insert license
-                    }
-                  }); // stat transaction
-                }
-              }); // check licenses for existence
-            }
-          }); // determine whether licenses been used
-        }
-      }); // check organization state
+      checkOrganizationState(req, res, sql);
     }
-  }); // mysql connect()
+  });
 }
 
 module.exports = apiDepositLicense;
