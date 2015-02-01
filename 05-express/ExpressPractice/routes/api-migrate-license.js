@@ -97,19 +97,48 @@ function checkRequestFormat(requests) {
   return true;
 }
 
+
+// commit changes on migrating license
+function doCommitChanges(req, res, sql) {
+  sql.commit(function (err) {
+    if (err) {
+      sql.rollback(function () {
+      });
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sql.release();
+    } else {
+      DIAG('Erase license success.');
+      res.status(200).end({}, req.query.pretty); // empty JSON on success
+    }
+  });
+}
+
 // write logs about license migration
 function doLogMigrateLicense(req, res, sql) {
-
+  var script = sqlScript.insertMigrateLicenseLog(req.params.orgIdIntSrc,
+    req.params.orgIdIntDest, req.params.licId, req.params.remaining_point);
+  DIAG('SQL: ' + sql);
+  sql.query(script, function (err, result) {
+    if (err) {
+      sql.rollback(function () {
+      });
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sql.release();
+    } else {
+      doCommitChanges(req, res, sql);
+    }
+  });
 }
 
 // migrate license from one organization to another
 function doMigrateLicense(req, res, sql) {
-  var script = sqlScript.migrateLicenseAmongOrganizations(req.params.orgIdIntSrc,
-    req.params.orgIdIntDest);
+  var script = sqlScript.migrateLicenseBetweenOrganizations(req.params.orgIdIntSrc,
+    req.params.orgIdIntDest, req.params.licId);
   DIAG('SQL: ' + sql);
   sql.query(script, function (err, result) {
     if (err) {
-      sql.rollback(function () {});
+      sql.rollback(function () {
+      });
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
       sql.release();
     } else {

@@ -8,6 +8,7 @@ var apiServerStatus = require('./api-server-status');
 var apiServerVersion = require('./api-server-version');
 var apiLicenseInfo = require('./api-get-license-info');
 var apiLicenseLog = require('./api-get-license-log');
+var apiMigrateLicense = require('./api-migrate-license');
 var apiEraseLicense = require('./api-erase-license');
 
 // Deposit license
@@ -20,6 +21,9 @@ router.get('/organization/:orgId/licenses/logs', apiLicenseLog.apiGetLicenseLog)
 // Get license info
 router.get('/organization/:orgId/licenses/:licId', apiLicenseInfo.apiGetLicenseInfoSingle);
 router.get('/organization/:orgId/licenses', apiLicenseInfo.apiGetLicenseInfo);
+
+// Migrate license
+router.put('/organization/:orgId/licenses/:licId', apiMigrateLicense);
 
 // Erase license
 router.delete('/organization/:orgId/licenses/:licId', apiEraseLicense);

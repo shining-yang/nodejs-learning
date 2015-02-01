@@ -226,13 +226,13 @@ function copyLicenseToHistory(orgId, licId) {
   sql += 'INSERT INTO license_history';
   sql += ' SELECT * FROM license';
   sql += ' WHERE organization_id = ? AND id = ?';
-  mysql.format(sql, [orgId, licId]);
+  return mysql.format(sql, [orgId, licId]);
 }
 
 // remove a specific entry from license
 function removeLicense(orgId, licId) {
   var sql = 'DELETE FROM license WHERE organization_id = ? AND id = ?';
-  mysql.format(sql, [orgId, licId]);
+  return mysql.format(sql, [orgId, licId]);
 }
 
 // insert log on erase license
@@ -241,7 +241,7 @@ function insertEraseLicenseLog(orgId, licId, changePoints) {
   sql += 'INSERT INTO license_log';
   sql += ' (license_id, organization_id, billing_id, change_point, action)';
   sql += ' VALUES (?, ?, ?, ?, ?)';
-  mysql.format(sql, [licId, orgId, 0, -changePoints, 'erase']);
+  return mysql.format(sql, [licId, orgId, 0, -changePoints, 'erase']);
 }
 
 // verify two organizations are in same group
@@ -250,7 +250,27 @@ function checkOrganizationsForSameGroup(orgIdSrc, orgIdDest) {
   sql += 'SELECT count(*) FROM organization AS O1';
   sql += ' WHERE O1.id = ? AND O1.group_id IN';
   sql += '(SELECT O2.group_id FROM organization AS O2 WHERE O2.id = ?)';
-  mysql.format(sql, [orgIdSrc, orgIdDest]);
+  return mysql.format(sql, [orgIdSrc, orgIdDest]);
+}
+
+// migrate license from one organization to another
+function migrateLicenseBetweenOrganizations(orgIdSrc, orgIdDest, licId) {
+  var sql = '';
+  sql += 'UPDATE license SET organization_id = ?';
+  sql += ' WHERE organization_id = ? AND id = ?';
+  return mysql.format(sql, [orgIdDest, orgIdSrc, licId]);
+}
+
+// log on license migration
+function insertMigrateLicenseLog(orgIdSrc, orgIdDest, licId, points) {
+  var sql = '';
+  sql += 'INSERT INTO license_log';
+  sql += ' (license_id, organization_id, billing_id, change_point, action)';
+  sql += ' VALUES ';
+  sql += ' (?, ?, 0, ?, \'migrate\')';
+  sql += ',';
+  sql += ' (?, ?, 0, ?, \'migrate\')';
+  return mysql.format(sql, [licId, orgIdSrc, -points, licId, orgIdDest, points]);
 }
 
 module.exports.getOrganizationAllInfo = getOrganizationAllInfo;
@@ -270,3 +290,5 @@ module.exports.copyLicenseToHistory = copyLicenseToHistory;
 module.exports.removeLicense = removeLicense;
 module.exports.insertEraseLicenseLog = insertEraseLicenseLog;
 module.exports.checkOrganizationsForSameGroup = checkOrganizationsForSameGroup;
+module.exports.migrateLicenseBetweenOrganizations = migrateLicenseBetweenOrganizations;
+module.exports.insertMigrateLicenseLog = insertMigrateLicenseLog;
