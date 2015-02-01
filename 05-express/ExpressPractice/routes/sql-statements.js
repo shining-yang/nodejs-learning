@@ -221,6 +221,30 @@ function getLicenseRemainingPoint(orgId, licId) {
   return mysql.format(sql, [orgId, licId]);
 }
 
+// insert an entry to license_history from license
+function copyLicenseToHistory(orgId, licId) {
+  var sql = '';
+  sql += 'INSERT INTO license_history';
+  sql += ' SELECT * FROM license';
+  sql += ' WHERE organization_id = ? AND id = ?';
+  mysql.format(sql, [orgId, licId]);
+}
+
+// remove a specific entry from license
+function removeLicense(orgId, licId) {
+  var sql = 'DELETE FROM license WHERE organization_id = ? AND id = ?';
+  mysql.format(sql, [orgId, licId]);
+}
+
+// insert log on erase license
+function insertEraseLicenseLog(orgId, licId, changePoints) {
+  var sql = '';
+  sql += 'INSERT INTO license_log';
+  sql += ' (license_id, organization_id, billing_id, change_point, action, last_update)';
+  sql += ' VALUES (?, ?, ?, ?, ?, ?)';
+  mysql.format(sql, [licId, orgId, 0, -changePoints, 'erase'], '0000-00-00 00:00:00');
+}
+
 module.exports.getOrganizationAllInfo = getOrganizationAllInfo;
 module.exports.getOrganizationState = getOrganizationState;
 module.exports.getOrganizationStateTimezone = getOrganizationStateTimezone;
@@ -234,3 +258,6 @@ module.exports.getLicenseInfo = getLicenseInfo;
 module.exports.getLicenseLogByOrgAndLic = getLicenseLogByOrgAndLic;
 module.exports.getLicenseLogByOrg = getLicenseLogByOrg;
 module.exports.getLicenseRemainingPoint = getLicenseRemainingPoint;
+module.exports.copyLicenseToHistory = copyLicenseToHistory;
+module.exports.removeLicense = removeLicense;
+module.exports.insertEraseLicenseLog = insertEraseLicenseLog;

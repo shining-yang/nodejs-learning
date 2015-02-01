@@ -105,6 +105,63 @@ function buildSuccessResponse(orgId, req, lic, cycle, pretty) {
   return stringifyJsonObj(resJson, pretty);
 }
 
+// step - perform the operations on erase license
+function performEraseLicense(req, res, sql) {
+  sql.beginTransaction(function (err) {
+    if (err) {
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sql.release();
+    } else {
+      // 1. copy to history
+      var script = sqlScript.copyLicenseToHistory(req.params.orgIdInt, req.params.licId);
+      DIAG('SQL: ' + sql);
+      sql.query(script, function (err, result) {
+        if (err) {
+          sql.rollback(function () {
+          });
+          res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+          sql.release();
+        } else {
+          // 2. remove entry from license
+          var script = sqlScript.removeLicense(req.params.orgIdInt, req.params.licId);
+          DIAG('SQL: ' + sql);
+          sql.query(script, function (err, result) {
+            if (err) {
+              sql.rollback(function () {});
+              res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+              sql.release();
+            } else {
+              // 3. log on erase license
+              var sql = sqlScript.insertEraseLicenseLog(req.params.orgIdInt, req.params.licId, req.params.changePoints);
+              DIAG('SQL: ' + sql);
+              sql.query(script, function (err, result) {
+                if (err) {
+                  sql.rollback(function () {
+                  });
+                  res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+                  sql.release();
+                } else {
+                  sql.commit(function (err) {
+                    if (err) {
+                      sql.rollback(function () {
+                      });
+                      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+                      sql.release();
+                    } else {
+                      DIAG('Erase license success.');
+                      res.status(200).end({}, req.query.pretty);
+                    }
+                  }); // commit
+                }
+              });
+            }
+          });
+        }
+      });
+    }
+  });
+}
+
 // step - verify that license has enough remaining-points for next-cycle billing
 function verifyLicenseRemainingPoints(req, res, sql) {
   var script = 'call calculate_budget';
@@ -118,12 +175,14 @@ function verifyLicenseRemainingPoints(req, res, sql) {
       sql.release();
     } else if (rows[0].hasEnoughPoints == 0) {
       res.status(406).end(buildErrorResponse('420-12', req.query.pretty));
-      verifyLicenseRemainingPoints(req, res, sql);
+      sql.release();
+    } else {
+      performEraseLicense(req, res, sql);
     }
   });
 }
 
-// step - ensure license exist
+// step - ensure license exist (ALSO retrieve remaining-points)
 function checkLicenseExistence(req, res, sql) {
   var script = sqlScript.getLicenseRemainingPoint(req.params.orgIdInt, req.params.licId);
   DIAG('SQL: ' + script);
@@ -136,6 +195,7 @@ function checkLicenseExistence(req, res, sql) {
       res.status(406).end(buildErrorResponseOnLicenses('406-05', [req.params.licId], req.query.pretty));
       sql.release();
     } else {
+      req.params.licRemainingPoints = rows[0].remaining_point;
       verifyLicenseRemainingPoints(req, res, sql);
     }
   });
