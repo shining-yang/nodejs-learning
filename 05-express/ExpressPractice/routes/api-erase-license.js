@@ -103,9 +103,9 @@ function doCommitChanges(req, res, sql) {
 
 // log after erase license
 function doLogOnEraseLicense(req, res, sql) {
-  var sql = sqlScript.insertEraseLicenseLog(req.params.orgIdInt, req.params.licId,
+  var script = sqlScript.insertEraseLicenseLog(req.params.orgIdInt, req.params.licId,
     req.params.changePoints);
-  DIAG('SQL: ' + sql);
+  DIAG('SQL: ' + script);
   sql.query(script, function (err, result) {
     if (err) {
       sql.rollback(function () {
@@ -121,7 +121,7 @@ function doLogOnEraseLicense(req, res, sql) {
 // remove a specific license entry
 function doRemoveFromLicense(req, res, sql) {
   var script = sqlScript.removeLicense(req.params.orgIdInt, req.params.licId);
-  DIAG('SQL: ' + sql);
+  DIAG('SQL: ' + script);
   sql.query(script, function (err, result) {
     if (err) {
       sql.rollback(function () {
@@ -137,7 +137,7 @@ function doRemoveFromLicense(req, res, sql) {
 // copy the specified license entry to license-history
 function doCopyLicenseToHistory(req, res, sql) {
   var script = sqlScript.copyLicenseToHistory(req.params.orgIdInt, req.params.licId);
-  DIAG('SQL: ' + sql);
+  DIAG('SQL: ' + script);
   sql.query(script, function (err, result) {
     if (err) {
       sql.rollback(function () {
