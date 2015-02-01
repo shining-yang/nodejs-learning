@@ -8,6 +8,7 @@ var apiServerStatus = require('./api-server-status');
 var apiServerVersion = require('./api-server-version');
 var apiLicenseInfo = require('./api-get-license-info');
 var apiLicenseLog = require('./api-get-license-log');
+var apiEraseLicense = require('./api-erase-license');
 
 // Deposit license
 router.post('/organization/:orgId/licenses', apiDepositLicense);
@@ -19,6 +20,9 @@ router.get('/organization/:orgId/licenses/logs', apiLicenseLog.apiGetLicenseLog)
 // Get license info
 router.get('/organization/:orgId/licenses/:licId', apiLicenseInfo.apiGetLicenseInfoSingle);
 router.get('/organization/:orgId/licenses', apiLicenseInfo.apiGetLicenseInfo);
+
+// Erase license
+router.delete('/organization/:orgId/licenses/:licId', apiEraseLicense);
 
 // GET server status
 router.get('/server/status', apiServerStatus);

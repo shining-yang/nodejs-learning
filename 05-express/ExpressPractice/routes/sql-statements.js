@@ -66,7 +66,7 @@ function checkLicenseUsablity(requests) {
 // construct sql script to deposit licenses
 function insertDepositLicense(orgId, requests, licenses) {
   var sql = 'INSERT INTO license';
-//  sql += ' (id, organization_id, user_id, original_point, remaining_point, po_number, bill_to, expiration, last_update)';
+  sql += ' (id, organization_id, user_id, original_point, remaining_point, po_number, bill_to)';
   sql += ' VALUES ';
 
   for (var i = 0; i < requests.length; i++) {
@@ -94,11 +94,11 @@ function insertDepositLicense(orgId, requests, licenses) {
       throw new Error({msg: 'Should not happen'});
     }
 
-    var insertSql = '(?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    var insertSql = '(?, ?, ?, ?, ?, ?, ?)';
     var insertPara = [
       requests[i].license_id, orgId, requests[i].deposited_by,
       licenses[idx].points, licenses[idx].points, licenses[idx].pk_number,
-      licenses[idx].obu, 6, '0000-00-00 00:00:00'
+      licenses[idx].obu
     ];
 
     sql += mysql.format(insertSql, insertPara);
@@ -110,7 +110,7 @@ function insertDepositLicense(orgId, requests, licenses) {
 // generate script for license log (after deposit)
 function insertDepositLicenseLog(orgId, licenses) {
   var sql = 'INSERT INTO license_log';
-  sql += ' (license_id, organization_id, billing_id, change_point, action, last_update)';
+  sql += ' (license_id, organization_id, billing_id, change_point, action)';
   sql += ' VALUES ';
 
   for (var i = 0; i < licenses.length; i++) {
@@ -118,10 +118,9 @@ function insertDepositLicenseLog(orgId, licenses) {
       sql += ',';
     }
 
-    var insertSql = '(?, ?, ?, ?, ?, ?)';
+    var insertSql = '(?, ?, ?, ?, ?)';
     var insertPara = [
       licenses[i].license_id, orgId, 0, licenses[i].points, 'deposit',
-      '0000-00-00 00:00:00'
     ];
 
     sql += mysql.format(insertSql, insertPara);
@@ -240,9 +239,9 @@ function removeLicense(orgId, licId) {
 function insertEraseLicenseLog(orgId, licId, changePoints) {
   var sql = '';
   sql += 'INSERT INTO license_log';
-  sql += ' (license_id, organization_id, billing_id, change_point, action, last_update)';
-  sql += ' VALUES (?, ?, ?, ?, ?, ?)';
-  mysql.format(sql, [licId, orgId, 0, -changePoints, 'erase'], '0000-00-00 00:00:00');
+  sql += ' (license_id, organization_id, billing_id, change_point, action)';
+  sql += ' VALUES (?, ?, ?, ?, ?)';
+  mysql.format(sql, [licId, orgId, 0, -changePoints, 'erase']);
 }
 
 module.exports.getOrganizationAllInfo = getOrganizationAllInfo;
