@@ -45,7 +45,7 @@ function checkLicenseExistence(requests, appId) {
 }
 
 // check whether licenses already been used by someone else （取集合交集）
-function checkLicenseUsablity(requests) {
+function checkLicenseUsability(requests) {
   var sql = 'SELECT id FROM (';
   for (var i = 0; i < requests.length; i++) {
     if (i > 0) {
@@ -244,10 +244,11 @@ function insertEraseLicenseLog(orgId, licId, changePoints) {
   mysql.format(sql, [licId, orgId, 0, -changePoints, 'erase']);
 }
 
+
 module.exports.getOrganizationAllInfo = getOrganizationAllInfo;
 module.exports.getOrganizationState = getOrganizationState;
 module.exports.getOrganizationStateTimezone = getOrganizationStateTimezone;
-module.exports.checkLicenseUsablity = checkLicenseUsablity;
+module.exports.checkLicenseUsability = checkLicenseUsability;
 module.exports.checkLicenseExistence = checkLicenseExistence;
 module.exports.insertDepositLicense = insertDepositLicense;
 module.exports.insertDepositLicenseLog = insertDepositLicenseLog;

@@ -215,7 +215,7 @@ function apiDepositLicense(req, res) {
           sqlConn.release();
         } else {
           // 2. determine whether licenses been used
-          var sql = sqlScript.checkLicenseUsablity(req.body.requests);
+          var sql = sqlScript.checkLicenseUsability(req.body.requests);
           DIAG('SQL: ' + sql);
           sqlConn.query(sql, function (err, usedIds) {
             if (err) {
