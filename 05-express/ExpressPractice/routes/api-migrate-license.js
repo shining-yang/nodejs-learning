@@ -97,12 +97,97 @@ function checkRequestFormat(requests) {
   return true;
 }
 
+// write logs about license migration
+function doLogMigrateLicense(req, res, sql) {
+
+}
+
+// migrate license from one organization to another
+function doMigrateLicense(req, res, sql) {
+  var script = sqlScript.migrateLicenseAmongOrganizations(req.params.orgIdIntSrc,
+    req.params.orgIdIntDest);
+  DIAG('SQL: ' + sql);
+  sql.query(script, function (err, result) {
+    if (err) {
+      sql.rollback(function () {});
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sql.release();
+    } else {
+      doLogMigrateLicense(req, res, sql);
+    }
+  });
+}
+
+// do migrate license
+function performMigrateLicense(req, res, sql) {
+  sql.beginTransaction(function (err) {
+    if (err) {
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sql.release();
+    } else {
+      doMigrateLicense(req, res, sql);
+    }
+  });
+}
+
+// verify that organization has enough points before migrate the license
+function verifyLicenseRemainingPoints(req, res, sql) {
+  var script = 'call calculate_budget';
+  sql.query(script, function (err, rows) {
+    if (err) {
+      DIAG(err);
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sql.release();
+    } else if (rows.length <= 0) {
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sql.release();
+    } else if (rows[0].hasEnoughPoints == 0) {
+      res.status(406).end(buildErrorResponse('420-12', req.query.pretty));
+      sql.release();
+    } else {
+      performMigrateLicense(req, res, sql);
+    }
+  });
+}
+
+// ensure license exist (ALSO retrieve remaining-points)
+function checkLicenseExistence(req, res, sql) {
+  var script = sqlScript.getLicenseRemainingPoint(req.params.orgIdIntSrc, req.params.licId);
+  DIAG('SQL: ' + script);
+  sql.query(script, function (err, rows) {
+    if (err) {
+      DIAG(err);
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sql.release();
+    } else if (rows.length <= 0) {
+      res.status(406).end(buildErrorResponseOnLicenses('406-05', [req.params.licId], req.query.pretty));
+      sql.release();
+    } else {
+      req.params.licRemainingPoints = rows[0].remaining_point;
+      verifyLicenseRemainingPoints(req, res, sql);
+    }
+  });
+}
+
 // ensure the two organizations for license migration are in the same group
 function checkOrganizationsForSameGroup(req, res, sql) {
   var script = sqlScript.checkOrganizationsForSameGroup(req.params.orgIdIntSrc, req.params.orgIdIntDest);
   DIAG('SQL: ' + sql);
   sql.query(script, function (err, rows) {
+    if (err) {
+      DIAG(err);
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sqlConn.release();
+    } else if (rows.length <= 0) { // no result
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sqlConn.release();
+    } else if (rows[0].count <= 0) { // result is 0
+      // TODO: these two organizations are not in same group. NEED a new error code.
+      res.status(420).end('{ ORGANIZATIONS ARE NOT IN SAME GROUP. }');
+      sql.release();
+    } else {
 
+    }
   });
 }
 
