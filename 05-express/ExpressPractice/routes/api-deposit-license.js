@@ -6,8 +6,8 @@ var util = require('util');
 var sqlScript = require('./sql-statements')
 var DIAG = console.log;
 var mysqlOptions = {
-  //host: '192.168.113.132',
-  //port: 3306,
+  host: '192.168.154.130',
+  port: 3306,
   user: 'root',
   password: '111111',
   database: 'license'
@@ -61,7 +61,7 @@ function buildErrorResponseOnLicenses(err, licenseIds, pretty) {
       msg = 'Not Acceptable. The license is not existed';
       break;
     case '409-03':
-      msg = 'Conflict. The license has been deposited'; // already been used
+      msg = 'Conflict. The license has been deposited';
       break;
     case '409-04':
       msg = 'Conflict. Duplicated data in the requested content';
@@ -139,6 +139,7 @@ function licenseContainsId(rows, id) {
       return true;
     }
   }
+
   return false;
 }
 
@@ -150,6 +151,7 @@ function filterInvalidLicenses(requests, rows) {
       ids.push(requests[i].license_id);
     }
   }
+
   return ids;
 }
 
@@ -172,6 +174,7 @@ function getDuplicateLicenseIds(requests) {
 
 // API: deposit licenses
 function apiDepositLicense(req, res) {
+  res.set('Content-Type', 'application/json');
   // check the API syntax
   if (!req.body
     || !Array.isArray(req.body.requests)

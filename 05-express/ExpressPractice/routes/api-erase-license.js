@@ -1,8 +1,9 @@
 //
-// API - Get license info
+// API - erase license
 //
 var mysql = require('mysql');
-var sqlScript = require('./sql-statements');
+var util = require('util');
+var sqlScript = require('./sql-statements')
 var DIAG = console.log;
 var mysqlOptions = {
   host: '192.168.154.130',
@@ -12,6 +13,7 @@ var mysqlOptions = {
   database: 'license'
 };
 var mysqlPool = mysql.createPool(mysqlOptions);
+
 
 // stringify json object
 function stringifyJsonObj(json, pretty) {
@@ -37,6 +39,9 @@ function buildErrorResponse(err, pretty) {
       break;
     case '406-02':
       msg = 'Not Acceptable. The organization is not existed';
+      break;
+    case '406-12':
+      msg = 'Not Acceptable. The license does not have any points';
       break;
     case '406-13':
       msg = 'Not Acceptable. The organization is not in normal mode or exhausted mode';
@@ -81,81 +86,63 @@ function buildErrorResponseOnLicenses(err, licenseIds, pretty) {
   return stringifyJsonObj(resJson, pretty);
 }
 
-// generate response on single license
-function buildSuccessResponseSingle(cycle, orgName, license, pretty) {
-  var resJson = {
-    licenses: {
-      id: license.id,
-      original_points: license.original_point,
-      remaining_points: license.remaining_point,
-      unit: cycle,
-      expiration: license.expiration,
-      belongs_to: orgName,
-      deposited_by: license.user_id,
-      activation_time: license.last_update
-    }
-  };
-
-  return stringifyJsonObj(resJson, pretty);
-}
-
-// generate response on multiple licenses
-function buildSuccessResponseMultiple(cycle, orgName, licenses, pretty) {
+function buildSuccessResponse(orgId, req, lic, cycle, pretty) {
   var resJson = {
     licenses: []
   };
 
-  for (var i = 0; i < licenses.length; i++) {
+  for (var i = 0; i < req.length; i++) {
     resJson.licenses.push({
-      id: licenses[i].id,
-      original_points: licenses[i].original_point,
-      remaining_points: licenses[i].remaining_point,
+      id: req[i].license_id,
+      points: lic[i].points,
       unit: cycle,
-      expiration: licenses[i].expiration,
-      belongs_to: orgName,
-      deposited_by: licenses[i].user_id,
-      activation_time: licenses[i].last_update
+      expiration: 0,
+      belongs_to: orgId,
+      deposited_by: req[i].deposited_by
     });
   }
 
   return stringifyJsonObj(resJson, pretty);
 }
 
-// retrieve specified license info
-function getLicenseInfoSingle(req, res, sql, cycle) {
-  var script = sqlScript.getLicenseInfoWithId(req.params.orgIdInt, req.params.licId);
+// step - verify that license has enough remaining-points for next-cycle billing
+function verifyLicenseRemainingPoints(req, res, sql) {
+  var script = 'call calculate_budget';
+  sql.query(script, function (err, rows) {
+    if (err) {
+      DIAG(err);
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sql.release();
+    } else if (rows.length <= 0) {
+      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+      sql.release();
+    } else if (rows[0].hasEnoughPoints == 0) {
+      res.status(406).end(buildErrorResponse('420-12', req.query.pretty));
+      verifyLicenseRemainingPoints(req, res, sql);
+    }
+  });
+}
+
+// step - ensure license exist
+function checkLicenseExistence(req, res, sql) {
+  var script = sqlScript.getLicenseRemainingPoint(req.params.orgIdInt, req.params.licId);
   DIAG('SQL: ' + script);
   sql.query(script, function (err, rows) {
     if (err) {
+      DIAG(err);
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-    } else if (rows.length != 1) {
+      sql.release();
+    } else if (rows.length <= 0) {
       res.status(406).end(buildErrorResponseOnLicenses('406-05', [req.params.licId], req.query.pretty));
+      sql.release();
     } else {
-      res.status(200).end(buildSuccessResponseSingle(cycle, req.params.orgId, rows[0], req.query.pretty));
+      verifyLicenseRemainingPoints(req, res, sql);
     }
-
-    sql.release();
   });
 }
 
-// retrieve all license info within the specified organization
-function getLicenseInfoMultiple(req, res, sql, cycle) {
-  var script = sqlScript.getLicenseInfo(req.params.orgIdInt);
-  DIAG('SQL: ' + script);
-  sql.query(script, function (err, rows) {
-    if (err) {
-      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-    } else {
-      res.status(200).end(buildSuccessResponseMultiple(cycle, req.params.orgId, rows, req.query.pretty));
-    }
-
-    sql.release();
-  });
-}
-
-// access database for license info
-function perform(req, res, sql, callback) {
-  // 1. check organization state
+// step - check organization state
+function checkOrganizationState(req, res, sql) {
   var script = sqlScript.getOrganizationState(req.params.orgId);
   DIAG('SQL: ' + script);
   sql.query(script, function (err, rows) {
@@ -173,43 +160,23 @@ function perform(req, res, sql, callback) {
       res.status(406).end(buildErrorResponse('406-13', req.query.pretty));
       sql.release();
     } else {
-      req.params.orgIdInt = rows[0].id; // save organization id <int>
-      // 2. get billing cycle which used as `unit`
-      var script = sqlScript.getBillingCycle(req.params.orgIdInt);
-      DIAG('SQL: ' + script);
-      sql.query(script, function (err, rowsBillingCycle) {
-        if (err || (rowsBillingCycle.length != 1)) {
-          res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-          sql.release();
-        } else {
-          callback(req, res, sql, rowsBillingCycle[0].cycle);
-        }
-      }); // get billing cycle
+      req.params.orgIdInt = rows[0].id;
+      checkLicenseExistence(req, res, sql);
     }
-  }); // check organization state
+  });
 }
 
-// API implementation
-function implement(req, res, callback) {
+// API: erase license
+function apiEraseLicense(req, res) {
   res.set('Content-Type', 'application/json');
   mysqlPool.getConnection(function (err, sql) {
     if (err) {
       res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
     } else {
-      perform(req, res, sql, callback);
+      checkOrganizationState(req, res, sql);
     }
   });
 }
 
-// API - get single license info
-function apiGetLicenseInfoSingle(req, res) {
-  implement(req, res, getLicenseInfoSingle);
-}
 
-// API - get all license info within specified organization-id
-function apiGetLicenseInfo(req, res) {
-  implement(req, res, getLicenseInfoMultiple);
-}
-
-module.exports.apiGetLicenseInfoSingle = apiGetLicenseInfoSingle;
-module.exports.apiGetLicenseInfo = apiGetLicenseInfo;
+module.exports = apiEraseLicense;

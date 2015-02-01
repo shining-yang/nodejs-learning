@@ -4,20 +4,20 @@
 var mysql = require('mysql');
 
 // get all info about the specified organization
-function getOrganizationInfoByName(orgName) {
+function getOrganizationAllInfo(orgName) {
   var sql = 'SELECT * FROM organization WHERE name = ?';
   var para = [orgName];
   return mysql.format(sql, para);
 }
 
-// get state of organization
+// get id & state of organization
 function getOrganizationState(orgName) {
   var sql = 'SELECT id, state FROM organization WHERE name = ?';
   var para = [orgName];
   return mysql.format(sql, para);
 }
 
-// get organization info: state, time-zone
+// get organization info: id, state, time-zone
 function getOrganizationStateTimezone(orgName) {
   var sql = 'SELECT id, state, time_zone FROM organization WHERE name = ?';
   var para = [orgName];
@@ -215,8 +215,13 @@ function getLicenseLogByOrg(orgId) {
   return mysql.format(sql, [orgId, orgId]);
 }
 
+// get remaining points of specified organization-id & license-id
+function getLicenseRemainingPoint(orgId, licId) {
+  var sql = 'SELECT remaining_point FROM license WHERE organization_id = ? AND id = ?';
+  return mysql.format(sql, [orgId, licId]);
+}
 
-module.exports.getOrganizationInfoByName = getOrganizationInfoByName;
+module.exports.getOrganizationAllInfo = getOrganizationAllInfo;
 module.exports.getOrganizationState = getOrganizationState;
 module.exports.getOrganizationStateTimezone = getOrganizationStateTimezone;
 module.exports.checkLicenseUsablity = checkLicenseUsablity;
@@ -228,6 +233,4 @@ module.exports.getLicenseInfoWithId = getLicenseInfoWithId;
 module.exports.getLicenseInfo = getLicenseInfo;
 module.exports.getLicenseLogByOrgAndLic = getLicenseLogByOrgAndLic;
 module.exports.getLicenseLogByOrg = getLicenseLogByOrg;
-
-
-
+module.exports.getLicenseRemainingPoint = getLicenseRemainingPoint;
