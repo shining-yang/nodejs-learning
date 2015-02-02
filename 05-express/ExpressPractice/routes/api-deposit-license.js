@@ -6,7 +6,7 @@ var util = require('util');
 var sqlScript = require('./sql-statements')
 var DIAG = console.log;
 var mysqlOptions = {
-  host: '192.168.154.130',
+  host: '192.168.113.132',
   port: 3306,
   user: 'root',
   password: '111111',

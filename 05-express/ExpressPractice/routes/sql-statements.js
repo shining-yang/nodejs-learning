@@ -273,6 +273,14 @@ function insertMigrateLicenseLog(orgIdSrc, orgIdDest, licId, points) {
   return mysql.format(sql, [licId, orgIdSrc, -points, licId, orgIdDest, points]);
 }
 
+// get all remaining-points of the specified organization
+function getOrganizationRemainingPoints(orgId) {
+  var sql = 'SELECT SUM(remaining_point) AS totalRemainingPoints';
+  sql += ' FROM license WHERE organization_id = ?';
+  return mysql.format(sql, [orgId]);
+}
+
+
 module.exports.getOrganizationAllInfo = getOrganizationAllInfo;
 module.exports.getOrganizationState = getOrganizationState;
 module.exports.getOrganizationStateTimezone = getOrganizationStateTimezone;
@@ -292,3 +300,4 @@ module.exports.insertEraseLicenseLog = insertEraseLicenseLog;
 module.exports.checkOrganizationsForSameGroup = checkOrganizationsForSameGroup;
 module.exports.migrateLicenseBetweenOrganizations = migrateLicenseBetweenOrganizations;
 module.exports.insertMigrateLicenseLog = insertMigrateLicenseLog;
+module.exports.getOrganizationRemainingPoints = getOrganizationRemainingPoints;

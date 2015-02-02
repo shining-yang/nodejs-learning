@@ -6,7 +6,7 @@ var util = require('util');
 var sqlScript = require('./sql-statements')
 var DIAG = console.log;
 var mysqlOptions = {
-  host: '192.168.154.130',
+  host: '192.168.113.132',
   port: 3306,
   user: 'root',
   password: '111111',
@@ -164,20 +164,35 @@ function performEraseLicense(req, res, sql) {
 
 // step - verify that license has enough remaining-points for next-cycle billing
 function verifyLicenseRemainingPoints(req, res, sql) {
-  var script = 'call calculate_budget';
+  var script = sqlScript.getOrganizationRemainingPoints(req.params.orgIdInt);
+  DIAG('SQL: ' + sql);
   sql.query(script, function (err, rows) {
     if (err) {
-      DIAG(err);
-      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-      sql.release();
-    } else if (rows.length <= 0) {
-      res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
-      sql.release();
-    } else if (rows[0].hasEnoughPoints == 0) {
-      res.status(406).end(buildErrorResponse('420-12', req.query.pretty));
-      sql.release();
-    } else {
-      performEraseLicense(req, res, sql);
+      if (err) {
+        DIAG(err);
+        res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+        sql.release();
+      } else if ((rows.length <= 0) || (rows[0].totalRemainingPoints == null)) {
+        res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+        sql.release();
+      } else {
+        var script = 'call get_device_budget(?)';
+        sql.query(script, req.params.orgIdInt, function (err, result) {
+          if (err) {
+            DIAG(err);
+            res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+            sql.release();
+          } else if (result.length <= 0) {
+            res.status(420).end(buildErrorResponse('420-02', req.query.pretty));
+            sql.release();
+          } else if (rows[0].totalRemainingPoints - result[0][0].budget_points < req.params.licRemainingPoints) {
+            res.status(406).end(buildErrorResponse('420-12', req.query.pretty));
+            sql.release();
+          } else {
+            performEraseLicense(req, res, sql);
+          }
+        });
+      }
     }
   });
 }
