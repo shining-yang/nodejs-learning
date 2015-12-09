@@ -65,7 +65,8 @@ function joinRoom(socket, room) {
 }
 
 function handleNameChangeAttempt(socket, nickNames, namesUsed) {
-    socket.on('nameAttempt', function(name) {
+    socket.on('nameAttempt', function(nickname) {
+        var name = nickname.newNickname;
         if (name.indexOf('Guest') == 0) {
             socket.emit('nameResult', {
                 success: false,
@@ -107,6 +108,16 @@ function handleMessageBroadcasting(socket) {
 
 function handleRoomJoining(socket) {
     socket.on('join', function(room) {
+        var previousRoom = currentRoom[socket.id];
+        if (previousRoom !== room) {
+            var usersInRoom = io.sockets.clients(previousRoom);
+            if (usersInRoom.length > 1) {
+                socket.broadcast.to(previousRoom).emit('message', {
+                    text: nickNames[socket.id] + ' has left the room.'
+                });
+            }
+        }
+
         socket.leave(currentRoom[socket.id]);
         joinRoom(socket, room.newRoom);
     });
