@@ -1,6 +1,6 @@
 /**
  * caller()
- * Shining Yang <y.s.n@live.com>, 2014-01-01
+ * Shining Yang <y.s.n@live.com>, 2015-01-01
  */
 
 function myCaller() {
@@ -12,7 +12,7 @@ function myCaller() {
 }
 
 console.log('test case 1:');
-(function myCallerInvoker() {
+(function () {
 	myCaller();
 })();
 
