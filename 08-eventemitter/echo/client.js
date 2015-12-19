@@ -1,7 +1,8 @@
+#!/usr/bin/env node
 // client to access the echo server
 //
 var net = require('net');
-var PORT = 9000;
+var PORT = process.env.PORT || 9000;
 var client = net.connect({
 	port: PORT
 }, function() {

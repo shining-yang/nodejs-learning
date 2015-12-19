@@ -26,4 +26,4 @@ for (var i = 0; i < s2.length; i++) {
     process.stdout.write(s2[i]);
 }
 
-console.log(process);
+//console.log(process);
