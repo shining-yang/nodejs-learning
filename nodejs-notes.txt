@@ -1,0 +1,17 @@
+# 2015-12-22
+
+url.parse()
+querystring.parse()
+@url.format()
+@url.resolve()
+
+http.request(options[, callback])
+返回一个http.ClientRequest实例，是可写的流(writable stream)，若使用
+POST方法上传文件，则将数据写入该实例
+
+querystring.stringify({'tel': '400-800'})
+:> 'tel=400-800'
+
+JSON.stringify(obj)
+
+http.get(options[, callback])
