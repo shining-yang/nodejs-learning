@@ -116,10 +116,10 @@ function handleRoomJoining(socket) {
                     text: nickNames[socket.id] + ' has left the room.'
                 });
             }
-        }
 
-        socket.leave(currentRoom[socket.id]);
-        joinRoom(socket, room.newRoom);
+            socket.leave(currentRoom[socket.id]);
+            joinRoom(socket, room.newRoom);
+        }
     });
 }
 
