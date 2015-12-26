@@ -15,3 +15,9 @@ querystring.stringify({'tel': '400-800'})
 JSON.stringify(obj)
 
 http.get(options[, callback])
+
+
+# 2015-12-26
+
+reply = Buffer.concat([reply, chunk]);
+
