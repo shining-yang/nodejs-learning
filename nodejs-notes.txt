@@ -21,3 +21,26 @@ http.get(options[, callback])
 
 reply = Buffer.concat([reply, chunk]);
 
+
+# 2015-12-27
+[Buffer]
+new Buffer(buf)
+new Buffer(array)
+new Buffer(length)
+new Buffer(str[, encoding])
+
+Buffer.byteLength(str[, encoding])
+Buffer.concat(list[, totalLength])
+Buffer.compare(buf1, buf2)
+Buffer.isBuffer(obj)
+Buffer.isEncoding(encoding)
+
+//--member functions
+buf[i]
+buf.compare(otherBuffer)
+buf.copy(targetBuffer[, targetStart, sourceStart, sourceEnd])
+buf.equals(otherBuffer)
+buf.fill(value[, start, end])
+buf.indexOf(value[, byteOffset])
+buf.slice([start[, end]]) // return a ref, so modify the slice will modify the original buffer
+buf.toString([encoding][,start][,end])
