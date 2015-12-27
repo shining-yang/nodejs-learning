@@ -1,9 +1,18 @@
 // RPC client using hessian-proxy
+var util = require('util');
 var Proxy = require('hessian-proxy').Proxy;
 var server = 'http://192.168.0.221:81/QcrlErp/remote/venueService';
 var username = '';
 var password = '';
 var proxy = new Proxy(server, username, password, proxy);
+
+proxy.on('call', function(data) {
+  console.log('CALL: ', data.length, ' ', data);
+});
+
+proxy.on('reply', function(data) {
+  console.log('REPLY: ', data.length, ' ', data);
+});
 
 var proc = 'queryVenueById';
 var arg = JSON.stringify({
@@ -18,5 +27,8 @@ proxy.invoke(proc, [myArg], function(err, reply) {
   } else {
     console.log('Reply data length: ', reply.length);
     console.log(reply);
+    //console.log(JSON.parse(reply));
+    console.log(util.inspect(JSON.parse(reply)));
+    console.log(JSON.stringify(JSON.parse(reply)));
   }
 });
