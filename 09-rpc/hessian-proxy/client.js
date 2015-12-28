@@ -14,7 +14,7 @@ proxy.on('reply', function(data) {
   console.log('REPLY: ', data.length, ' ', data);
 });
 
-var proc = 'queryVenueById';
+var proc = 'queryVenueById';//'queryVenueAccountById';
 var arg = JSON.stringify({
   id: 4103
 });
@@ -32,3 +32,7 @@ proxy.invoke(proc, [myArg], function(err, reply) {
     console.log(JSON.stringify(JSON.parse(reply)));
   }
 });
+
+function qcrlRpc(method, args, cb) {
+
+}
