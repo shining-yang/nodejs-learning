@@ -1,5 +1,4 @@
 # 2015-12-22
-
 url.parse()
 querystring.parse()
 @url.format()
@@ -18,7 +17,6 @@ http.get(options[, callback])
 
 
 # 2015-12-26
-
 reply = Buffer.concat([reply, chunk]);
 
 
@@ -44,3 +42,10 @@ buf.fill(value[, start, end])
 buf.indexOf(value[, byteOffset])
 buf.slice([start[, end]]) // return a ref, so modify the slice will modify the original buffer
 buf.toString([encoding][,start][,end])
+
+
+# 2015-12-29
+ks = Object.keys(obj) // construct a array of the object's key name
+var re = new RegExp('^' + exp);    var captures = str.match(re);    var caps = captures.slice(1);
+var a = [1, '2'];  a.concat(['Hi']);
+
