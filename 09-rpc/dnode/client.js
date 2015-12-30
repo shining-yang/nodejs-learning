@@ -15,5 +15,13 @@ var dnode = require('dnode');
       d.end();
     });
   });
+  d.on('error', function(err) {
+      console.log(err);
+      d.end();
+      setTimeout(function() {
+          console.log('Try to re-connect server again...');
+          tryRpc();
+      }, 3000);
+  });
 }());
 
