@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var dnode = require('dnode');
 
 (function tryRpc() {
