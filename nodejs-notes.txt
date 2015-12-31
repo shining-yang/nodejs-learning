@@ -49,3 +49,5 @@ ks = Object.keys(obj) // construct a array of the object's key name
 var re = new RegExp('^' + exp);    var captures = str.match(re);    var caps = captures.slice(1);
 var a = [1, '2'];  a.concat(['Hi']);
 
+
+# 2015-12-30 - Node.js v4.2.4 Documentation - child_process
