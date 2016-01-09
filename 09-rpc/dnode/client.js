@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var dnode = require('dnode');
 
 (function tryRpc() {
@@ -12,6 +14,14 @@ var dnode = require('dnode');
       console.log('The result is: ', s);
       d.end();
     });
+  });
+  d.on('error', function(err) {
+      console.log(err);
+      d.end();
+      setTimeout(function() {
+          console.log('Try to re-connect server again...');
+          tryRpc();
+      }, 3000);
   });
 }());
 

@@ -1,9 +1,10 @@
+#!/usr/bin/env node
 
 var dnode = require('dnode');
 
 var server = dnode({
-  tranform: function(s, cb) {
-    cb(s.replace(/[aeiou]{2,}/, 'oo').toUpperCase());
+  transform: function(s, cb) {
+    cb(s.replace(/[aeiou]{2,}/g, '**').toUpperCase());
   }
 });
 
